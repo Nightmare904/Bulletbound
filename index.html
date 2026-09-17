@@ -81,12 +81,21 @@ orbs=[];
 let score=0;
 
 let wave=1;
-let waveSpawned=0;
+
+/*
+These variables are completely separate
+from the enemies array.
+
+waveTotal = total enemies this wave
+waveSpawned = how many have actually spawned
+*/
+
 let waveTotal=0;
+let waveSpawned=0;
+
 let waveSpawnTimer=0;
 let waveBreakTimer=0;
 
-let spawn=0;
 let shoot=0;
 let last=0;
 
@@ -165,28 +174,66 @@ apply:()=>player.damage*=2
 
 
 /* =========================
-   WAVE SYSTEM
+   WAVE DIFFICULTY
 ========================= */
 
-function waveEnemyCount(){
-return 5+(wave-1)*2
+function getWaveEnemyCount(w){
+
+/*
+Wave 1 = 5
+Wave 2 = 7
+Wave 3 = 9
+Wave 4 = 11
+etc.
+*/
+
+return 5+(w-1)*2;
+
 }
 
-function waveSpawnSpeed(){
-return Math.max(.35,1.15-(wave-1)*.055)
+
+function getWaveSpawnSpeed(w){
+
+/*
+Spawning gradually gets faster,
+but never becomes absurdly fast.
+*/
+
+return Math.max(
+.35,
+1.15-(w-1)*.055
+);
+
 }
 
-function waveEnemyHealth(){
-return 40+wave*7
+
+function getWaveEnemyHealth(w){
+
+return 40+w*7;
+
 }
 
-function waveEnemySpeed(){
-return (35+Math.random()*20)*.5*(1+(wave-1)*.035)
+
+function getWaveEnemySpeed(w){
+
+return (
+35+
+Math.random()*20
+)*.5*
+(1+(w-1)*.035);
+
 }
 
-function beginWave(){
 
-waveTotal=waveEnemyCount();
+/* =========================
+   START WAVE
+========================= */
+
+function startWave(){
+
+waveTotal=
+getWaveEnemyCount(wave);
+
 waveSpawned=0;
 
 waveSpawnTimer=.5;
@@ -226,8 +273,8 @@ orbs=[];
 score=0;
 
 wave=1;
-waveSpawned=0;
 waveTotal=0;
+waveSpawned=0;
 waveSpawnTimer=0;
 waveBreakTimer=0;
 
@@ -239,6 +286,7 @@ xpNext=100;
 
 upgradeChoices=[];
 upgradeOpen=false;
+
 paused=false;
 gameOver=false;
 
@@ -252,7 +300,7 @@ aimJoy.pointerId=null;
 aimJoy.dx=1;
 aimJoy.dy=0;
 
-beginWave();
+startWave();
 
 }
 
@@ -263,7 +311,8 @@ beginWave();
 
 function spawnEnemy(){
 
-const side=Math.floor(Math.random()*4);
+const side=
+Math.floor(Math.random()*4);
 
 let x=
 side===0?-30:
@@ -275,19 +324,24 @@ side===2?-30:
 side===3?H+30:
 Math.random()*H;
 
+
 enemies.push({
 
 x:x,
 y:y,
+
 r:14,
 
-hp:waveEnemyHealth(),
+hp:getWaveEnemyHealth(wave),
 
-speed:waveEnemySpeed(),
+speed:getWaveEnemySpeed(wave),
 
 shoot:1+Math.random()*2,
 
-color:Math.random()<.5?"#ff4f70":"#a66cff"
+color:
+Math.random()<.5
+?"#ff4f70"
+:"#a66cff"
 
 });
 
@@ -301,14 +355,14 @@ color:Math.random()<.5?"#ff4f70":"#a66cff"
 function joystickPos(){
 
 joy.x=82;
-joy.y=H-82
+joy.y=H-82;
 
 }
 
 function aimJoystickPos(){
 
 aimJoy.x=W-65;
-aimJoy.y=H-65
+aimJoy.y=H-65;
 
 }
 
@@ -325,12 +379,13 @@ let dx=px-joy.x,
 dy=py-joy.y;
 
 let l=Math.hypot(dx,dy)||1;
+
 let max=joy.r;
 
 if(l>max){
 
 dx=dx/l*max;
-dy=dy/l*max
+dy=dy/l*max;
 
 }
 
@@ -338,7 +393,7 @@ joy.dx=dx/max;
 joy.dy=dy/max;
 
 joy.tx=joy.x+dx;
-joy.ty=joy.y+dy
+joy.ty=joy.y+dy;
 
 }
 
@@ -355,12 +410,13 @@ let dx=px-aimJoy.x,
 dy=py-aimJoy.y;
 
 let l=Math.hypot(dx,dy)||1;
+
 let max=aimJoy.r;
 
 if(l>max){
 
 dx=dx/l*max;
-dy=dy/l*max
+dy=dy/l*max;
 
 }
 
@@ -372,7 +428,8 @@ aimJoy.dy=dy/max;
 aimJoy.tx=aimJoy.x+dx;
 aimJoy.ty=aimJoy.y+dy;
 
-player.aimTarget=Math.atan2(
+player.aimTarget=
+Math.atan2(
 aimJoy.dy,
 aimJoy.dx
 );
@@ -383,7 +440,7 @@ aimJoy.dx
 
 
 /* =========================
-   PAUSE / UI
+   UI
 ========================= */
 
 function pointInPause(x,y){
@@ -391,23 +448,37 @@ function pointInPause(x,y){
 return x>=W-110&&
 x<=W-16&&
 y>=12&&
-y<=44
+y<=44;
 
 }
 
+
 function pointInUpgrade(x,y,i){
 
-const gap=16,
-cardW=Math.min(300,(W-32-gap)/2),
-totalW=cardW*2+gap,
-startX=(W-totalW)/2,
-cardY=H/2-75,
-xx=startX+i*(cardW+gap);
+const gap=16;
+
+const cardW=
+Math.min(
+300,
+(W-32-gap)/2
+);
+
+const totalW=
+cardW*2+gap;
+
+const startX=
+(W-totalW)/2;
+
+const cardY=
+H/2-75;
+
+const xx=
+startX+i*(cardW+gap);
 
 return x>=xx&&
 x<=xx+cardW&&
 y>=cardY&&
-y<=cardY+150
+y<=cardY+150;
 
 }
 
@@ -416,40 +487,52 @@ y<=cardY+150
    POINTER DOWN
 ========================= */
 
-c.addEventListener("pointerdown",e=>{
+c.addEventListener(
+"pointerdown",
+e=>{
 
 if(gameOver){
 
 reset();
-return
+return;
 
 }
 
-if(!upgradeOpen&&pointInPause(e.clientX,e.clientY)){
+
+if(
+!upgradeOpen&&
+pointInPause(
+e.clientX,
+e.clientY
+)
+){
 
 paused=!paused;
-return
+return;
 
 }
+
 
 if(upgradeOpen){
 
 for(let i=0;i<2;i++){
 
-if(pointInUpgrade(
+if(
+pointInUpgrade(
 e.clientX,
 e.clientY,
 i
-)){
+)
+){
 
 chooseUpgrade(i);
-return
+return;
 
 }
 
 }
 
-return
+return;
 
 }
 
@@ -458,12 +541,14 @@ joystickPos();
 aimJoystickPos();
 
 
-const ad=Math.hypot(
+const ad=
+Math.hypot(
 e.clientX-aimJoy.x,
 e.clientY-aimJoy.y
 );
 
-const jd=Math.hypot(
+const jd=
+Math.hypot(
 e.clientX-joy.x,
 e.clientY-joy.y
 );
@@ -477,14 +562,16 @@ ad<aimJoy.r+20&&
 ){
 
 aimJoy.on=true;
-aimJoy.pointerId=e.pointerId;
+
+aimJoy.pointerId=
+e.pointerId;
 
 setAimJoystick(
 e.clientX,
 e.clientY
 );
 
-return
+return;
 
 }
 
@@ -497,7 +584,9 @@ jd<joy.r+20&&
 ){
 
 joy.on=true;
-joy.pointerId=e.pointerId;
+
+joy.pointerId=
+e.pointerId;
 
 setJoystick(
 e.clientX,
@@ -513,7 +602,9 @@ e.clientY
    POINTER MOVE
 ========================= */
 
-c.addEventListener("pointermove",e=>{
+c.addEventListener(
+"pointermove",
+e=>{
 
 if(
 joy.on&&
@@ -526,6 +617,7 @@ e.clientY
 );
 
 }
+
 
 if(
 aimJoy.on&&
@@ -562,7 +654,7 @@ joy.dy=0;
 joystickPos();
 
 joy.tx=joy.x;
-joy.ty=joy.y
+joy.ty=joy.y;
 
 }
 
@@ -578,7 +670,7 @@ aimJoy.pointerId=null;
 aimJoystickPos();
 
 aimJoy.tx=aimJoy.x;
-aimJoy.ty=aimJoy.y
+aimJoy.ty=aimJoy.y;
 
 }
 
@@ -596,17 +688,19 @@ releasePointer
 
 
 /* =========================
-   KEYBOARD PAUSE
+   KEYBOARD
 ========================= */
 
-addEventListener("keydown",e=>{
+addEventListener(
+"keydown",
+e=>{
 
 if(
 e.key.toLowerCase()==="p"||
 e.key==="Escape"
 ){
 
-togglePause()
+togglePause();
 
 }
 
@@ -626,12 +720,16 @@ upgradeOpen
 )return;
 
 
-/* PLAYER MOVEMENT */
+/* =========================
+   PLAYER MOVEMENT
+========================= */
 
 let dx=joy.dx,
 dy=joy.dy;
 
-if(Math.hypot(dx,dy)>.05){
+if(
+Math.hypot(dx,dy)>.05
+){
 
 player.x+=
 dx*player.speed*dt;
@@ -642,27 +740,35 @@ dy*player.speed*dt;
 }
 
 
-/* PLAYER BOUNDS */
-
-player.x=Math.max(
+player.x=
+Math.max(
 18,
-Math.min(W-18,player.x)
+Math.min(
+W-18,
+player.x
+)
 );
 
-player.y=Math.max(
+player.y=
+Math.max(
 62,
-Math.min(H-18,player.y)
+Math.min(
+H-18,
+player.y
+)
 );
 
 
 /* =========================
-   AIM SMOOTHING
+   AIM
 ========================= */
 
 if(aimJoy.on){
 
 let diff=
-player.aimTarget-player.aim;
+player.aimTarget-
+player.aim;
+
 
 while(diff>Math.PI)
 diff-=Math.PI*2;
@@ -672,19 +778,22 @@ diff+=Math.PI*2;
 
 
 /*
-Half sensitivity:
-the aim only moves halfway
-toward the joystick's target.
+50% sensitivity.
 */
 
 player.aim+=
-diff*Math.min(1,dt*10*player.aimSensitivity);
+diff*
+Math.min(
+1,
+dt*10*
+player.aimSensitivity
+);
 
 }
 
 
 /* =========================
-   WAVE SPAWNING
+   WAVE BREAK
 ========================= */
 
 if(waveBreakTimer>0){
@@ -693,18 +802,16 @@ waveBreakTimer-=dt;
 
 if(waveBreakTimer<=0){
 
-beginWave();
+startWave();
 
 }
 
 }
 
 
-/*
-Only spawn enemies while
-the current wave still has
-enemies remaining to spawn.
-*/
+/* =========================
+   SPAWN CURRENT WAVE
+========================= */
 
 if(
 waveBreakTimer<=0&&
@@ -715,29 +822,52 @@ waveSpawnTimer-=dt;
 
 if(waveSpawnTimer<=0){
 
+/*
+IMPORTANT:
+The counter is incremented
+at the exact moment an enemy
+is created.
+*/
+
 spawnEnemy();
 
 waveSpawned++;
 
 waveSpawnTimer=
-waveSpawnSpeed();
+getWaveSpawnSpeed(wave);
 
 }
 
 }
 
+
+/* =========================
+   WAVE COMPLETION
+========================= */
 
 /*
-When every enemy has spawned
-AND every enemy is dead,
-start the next wave.
+A wave is complete only when:
+
+1. Every planned enemy spawned.
+2. Every spawned enemy is dead.
+
+Then the player is healed and
+the next wave is prepared.
 */
 
 if(
 waveBreakTimer<=0&&
-waveSpawned>=waveTotal&&
+waveSpawned===waveTotal&&
 enemies.length===0
 ){
+
+/* FULL HEAL */
+
+player.hp=
+player.maxHp;
+
+
+/* NEXT WAVE */
 
 wave++;
 
@@ -767,7 +897,10 @@ i++
 
 const aa=
 a+
-(i-(player.shots-1)/2)*.18;
+(
+i-
+(player.shots-1)/2
+)*.18;
 
 shots.push({
 
@@ -790,7 +923,8 @@ damage:player.damage
 
 }
 
-shoot=player.fireRate
+shoot=
+player.fireRate;
 
 }
 
@@ -801,10 +935,12 @@ shoot=player.fireRate
 
 for(const e of enemies){
 
-let a=Math.atan2(
+let a=
+Math.atan2(
 player.y-e.y,
 player.x-e.x
 );
+
 
 e.x+=
 Math.cos(a)*
@@ -816,10 +952,9 @@ Math.sin(a)*
 e.speed*
 dt;
 
+
 e.shoot-=dt;
 
-
-/* ENEMY SHOOTING */
 
 if(e.shoot<=0){
 
@@ -839,12 +974,12 @@ life:5
 
 });
 
-e.shoot=2.5
+e.shoot=2.5;
 
 }
 
 
-/* ENEMY COLLISION */
+/* COLLISION */
 
 if(
 Math.hypot(
@@ -869,20 +1004,21 @@ Math.sin(a)*25;
 
 
 /* =========================
-   PLAYER BULLETS
+   PLAYER PROJECTILES
 ========================= */
 
 for(const s of shots){
 
 s.x+=s.vx*dt;
 s.y+=s.vy*dt;
-s.life-=dt
+
+s.life-=dt;
 
 }
 
 
 /* =========================
-   ENEMY BULLETS
+   ENEMY PROJECTILES
 ========================= */
 
 for(const s of enemyShots){
@@ -903,7 +1039,8 @@ s.r+player.r
 ){
 
 player.hp-=15;
-s.life=0
+
+s.life=0;
 
 }
 
@@ -929,6 +1066,7 @@ s.r+e.r
 ){
 
 e.hp-=s.damage;
+
 s.life=0;
 
 
@@ -937,13 +1075,15 @@ if(e.hp<=0){
 score+=10;
 
 orbs.push({
+
 x:e.x,
 y:e.y
+
 });
 
 }
 
-break
+break;
 
 }
 
@@ -956,7 +1096,9 @@ break
    CLEANUP
 ========================= */
 
-shots=shots.filter(s=>
+shots=
+shots.filter(
+s=>
 s.life>0&&
 s.x>-30&&
 s.x<W+30&&
@@ -964,14 +1106,16 @@ s.y>-30&&
 s.y<H+30
 );
 
+
 enemyShots=
-enemyShots.filter(s=>
-s.life>0
+enemyShots.filter(
+s=>s.life>0
 );
 
+
 enemies=
-enemies.filter(e=>
-e.hp>0
+enemies.filter(
+e=>e.hp>0
 );
 
 
@@ -1015,7 +1159,9 @@ o.dead=true;
 xp+=25;
 
 
-while(xp>=xpNext){
+while(
+xp>=xpNext
+){
 
 xp-=xpNext;
 
@@ -1028,7 +1174,7 @@ xpNext*1.25
 
 openUpgrades();
 
-break
+break;
 
 }
 
@@ -1038,16 +1184,20 @@ break
 
 
 orbs=
-orbs.filter(o=>!o.dead);
+orbs.filter(
+o=>!o.dead
+);
 
 
 /* =========================
    GAME OVER
 ========================= */
 
-if(player.hp<=0){
+if(
+player.hp<=0
+){
 
-gameOver=true
+gameOver=true;
 
 }
 
@@ -1055,7 +1205,7 @@ gameOver=true
 
 
 /* =========================
-   OPEN UPGRADES
+   UPGRADE SCREEN
 ========================= */
 
 function openUpgrades(){
@@ -1087,7 +1237,7 @@ pool.splice(i,1)[0]
 
 
 /* =========================
-   CHOOSE UPGRADE
+   SELECT UPGRADE
 ========================= */
 
 function chooseUpgrade(i){
@@ -1097,7 +1247,29 @@ if(
 !upgradeChoices[i]
 )return;
 
+
+/*
+Apply upgrade.
+*/
+
 upgradeChoices[i].apply();
+
+
+/*
+CLEAR ALL PROJECTILES.
+
+This removes both:
+- player bullets
+- enemy bullets
+*/
+
+shots=[];
+enemyShots=[];
+
+
+/*
+Close upgrade screen.
+*/
 
 upgradeChoices=[];
 
@@ -1105,7 +1277,13 @@ upgradeOpen=false;
 
 paused=false;
 
-shoot=0
+
+/*
+Allow shooting immediately
+after the upgrade.
+*/
+
+shoot=0;
 
 }
 
@@ -1121,7 +1299,7 @@ gameOver||
 upgradeOpen
 )return;
 
-paused=!paused
+paused=!paused;
 
 }
 
@@ -1158,9 +1336,10 @@ ctx.beginPath();
 ctx.moveTo(x,50);
 ctx.lineTo(x,H);
 
-ctx.stroke()
+ctx.stroke();
 
 }
+
 
 for(
 let y=50;
@@ -1173,7 +1352,7 @@ ctx.beginPath();
 ctx.moveTo(0,y);
 ctx.lineTo(W,y);
 
-ctx.stroke()
+ctx.stroke();
 
 }
 
@@ -1200,7 +1379,7 @@ W-100,
 );
 
 
-/* XP BAR */
+/* XP */
 
 ctx.fillStyle="#65e6ff";
 
@@ -1214,7 +1393,8 @@ ctx.fillRect(
 ctx.fillRect(
 16,
 50,
-150*Math.max(
+150*
+Math.max(
 0,
 xp/xpNext
 ),
@@ -1242,13 +1422,16 @@ ctx.font=
 "10px system-ui";
 
 ctx.fillText(
-Math.floor(xp)+" / "+xpNext+" XP",
+Math.floor(xp)+
+" / "+
+xpNext+
+" XP",
 16,
 68
 );
 
 
-/* HP BAR */
+/* HP */
 
 ctx.fillStyle="#32141a";
 
@@ -1264,7 +1447,8 @@ ctx.fillStyle="#ff914d";
 ctx.fillRect(
 16,
 34,
-150*Math.max(
+150*
+Math.max(
 0,
 player.hp/player.maxHp
 ),
@@ -1286,16 +1470,23 @@ ctx.fillStyle="#fff";
 ctx.font=
 "bold 10px system-ui";
 
+ctx.textAlign="center";
+
 ctx.fillText(
-"ENEMIES "+waveSpawned+" / "+waveTotal,
-W/2-45,
+"ENEMIES "+
+waveSpawned+
+" / "+
+waveTotal,
+W/2,
 24
 );
+
+ctx.textAlign="left";
 
 }
 
 else if(
-waveSpawned>=waveTotal&&
+waveSpawned===waveTotal&&
 enemies.length>0
 ){
 
@@ -1304,11 +1495,15 @@ ctx.fillStyle="#fff";
 ctx.font=
 "bold 10px system-ui";
 
+ctx.textAlign="center";
+
 ctx.fillText(
 "ELIMINATE REMAINING",
-W/2-65,
+W/2,
 24
 );
+
+ctx.textAlign="left";
 
 }
 
@@ -1324,7 +1519,7 @@ ctx.font=
 ctx.textAlign="center";
 
 ctx.fillText(
-"WAVE "+(wave+1),
+"NEXT WAVE",
 W/2,
 24
 );
@@ -1352,7 +1547,7 @@ o.y,
 Math.PI*2
 );
 
-ctx.fill()
+ctx.fill();
 
 }
 
@@ -1375,7 +1570,7 @@ s.r,
 Math.PI*2
 );
 
-ctx.fill()
+ctx.fill();
 
 }
 
@@ -1398,7 +1593,7 @@ s.r,
 Math.PI*2
 );
 
-ctx.fill()
+ctx.fill();
 
 }
 
@@ -1466,9 +1661,10 @@ ctx.fillStyle="#72e68b";
 ctx.fillRect(
 e.x-15,
 e.y-22,
-30*Math.max(
+30*
+Math.max(
 0,
-e.hp/waveEnemyHealth()
+e.hp/getWaveEnemyHealth(wave)
 ),
 4
 );
@@ -1488,6 +1684,7 @@ player.y
 );
 
 ctx.shadowBlur=14;
+
 ctx.shadowColor="#42d9ff";
 
 ctx.fillStyle="#42d9ff";
@@ -1567,7 +1764,9 @@ ctx.font=
 ctx.textAlign="center";
 
 ctx.fillText(
-paused?"RESUME":"PAUSE",
+paused?
+"RESUME":
+"PAUSE",
 W-63,
 33
 );
@@ -1594,7 +1793,6 @@ Math.PI*2
 );
 
 ctx.fill();
-
 
 ctx.strokeStyle="#6fe7ff";
 
@@ -1655,7 +1853,6 @@ Math.PI*2
 );
 
 ctx.fill();
-
 
 ctx.strokeStyle="#6fe7ff";
 
@@ -1726,16 +1923,21 @@ H/2-110
 );
 
 
-const gap=16,
-cardW=Math.min(
+const gap=16;
+
+const cardW=
+Math.min(
 300,
 (W-32-gap)/2
-),
-totalW=
-cardW*2+gap,
-startX=
-(W-totalW)/2,
-cardY=
+);
+
+const totalW=
+cardW*2+gap;
+
+const startX=
+(W-totalW)/2;
+
+const cardY=
 H/2-75;
 
 
@@ -1745,7 +1947,8 @@ i<2;
 i++
 ){
 
-const u=upgradeChoices[i];
+const u=
+upgradeChoices[i];
 
 const x=
 startX+
@@ -1807,7 +2010,7 @@ cardY+120
 
 }
 
-ctx.textAlign="left"
+ctx.textAlign="left";
 
 }
 
@@ -1852,7 +2055,7 @@ W/2,
 H/2+30
 );
 
-ctx.textAlign="left"
+ctx.textAlign="left";
 
 }
 
@@ -1900,7 +2103,7 @@ W/2,
 H/2+45
 );
 
-ctx.textAlign="left"
+ctx.textAlign="left";
 
 }
 
@@ -1924,13 +2127,13 @@ last=t;
 update(dt);
 draw();
 
-requestAnimationFrame(loop)
+requestAnimationFrame(loop);
 
 }
 
 
 /* =========================
-   START
+   START GAME
 ========================= */
 
 reset();
