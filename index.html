@@ -97,7 +97,18 @@ weapon:null,
 scatterPlus2:0,
 
 // Fast Pew Pew upgrades
-fastDamageUpgrades:0
+fastDamageUpgrades:0,
+fastAttackSpeedUpgrades:0,
+fastVelocityUpgrades:0,
+ammoCapacityUpgrades:0,
+reloadTimeUpgrades:0,
+
+// Ammo
+maxAmmo:8,
+ammo:8,
+reloadTime:2,
+reloadTimer:0,
+reloading:false
 };
 
 
@@ -178,6 +189,49 @@ desc:"Increase damage by 50%",
 apply:()=>{
 player.damage*=1.5;
 player.fastDamageUpgrades++;
+}
+},
+
+{
+name:"Rapid Fire",
+desc:"Increase attack speed by 25%",
+apply:()=>{
+player.fireRate*=.75;
+player.fastAttackSpeedUpgrades++;
+}
+},
+
+{
+name:"Velocity Boost",
+desc:"Increase projectile velocity by 50%",
+apply:()=>{
+player.bulletSpeed*=1.5;
+player.fastVelocityUpgrades++;
+}
+},
+
+{
+name:"Ammo Capacity",
+desc:"Increase maximum ammo by 2",
+apply:()=>{
+player.maxAmmo+=2;
+player.ammo=Math.min(
+player.ammo+2,
+player.maxAmmo
+);
+player.ammoCapacityUpgrades++;
+}
+},
+
+{
+name:"Quick Reload",
+desc:"Decrease reload time by 0.2 seconds",
+apply:()=>{
+player.reloadTime=Math.max(
+.2,
+player.reloadTime-.2
+);
+player.reloadTimeUpgrades++;
 }
 }
 
@@ -278,7 +332,18 @@ player.aimSensitivity=.5;
 player.weapon=null;
 
 player.scatterPlus2=0;
+
 player.fastDamageUpgrades=0;
+player.fastAttackSpeedUpgrades=0;
+player.fastVelocityUpgrades=0;
+player.ammoCapacityUpgrades=0;
+player.reloadTimeUpgrades=0;
+
+player.maxAmmo=8;
+player.ammo=8;
+player.reloadTime=2;
+player.reloadTimer=0;
+player.reloading=false;
 
 enemies=[];
 shots=[];
@@ -678,8 +743,6 @@ e.pointerId===aimJoy.pointerId
 aimJoy.on=false;
 aimJoy.pointerId=null;
 
-aimJoystickPos();
-
 aimJoy.tx=aimJoy.x;
 aimJoy.ty=aimJoy.y;
 
@@ -845,6 +908,25 @@ completeWave();
 
 
 // -------------------------
+// AMMO RELOAD
+// -------------------------
+
+if(player.reloading){
+
+player.reloadTimer-=dt;
+
+if(player.reloadTimer<=0){
+
+player.ammo=player.maxAmmo;
+player.reloadTimer=0;
+player.reloading=false;
+
+}
+
+}
+
+
+// -------------------------
 // SHOOTING
 // -------------------------
 
@@ -852,7 +934,9 @@ shoot-=dt;
 
 if(
 shoot<=0&&
-aimJoy.on
+aimJoy.on&&
+!player.reloading&&
+player.ammo>0
 ){
 
 const a=player.aim;
@@ -941,7 +1025,23 @@ damage:player.damage
 
 }
 
+
+// One ammo is consumed per firing cycle.
+
+player.ammo--;
+
 shoot=player.fireRate;
+
+
+// Start reload immediately after the last shot.
+
+if(player.ammo<=0){
+
+player.ammo=0;
+player.reloading=true;
+player.reloadTimer=player.reloadTime;
+
+}
 
 }
 
@@ -1286,6 +1386,14 @@ player.damage=20;
 
 player.fireRate=.28*2;
 
+player.bulletSpeed=480;
+
+player.maxAmmo=8;
+player.ammo=8;
+player.reloadTime=2;
+player.reloadTimer=0;
+player.reloading=false;
+
 }
 
 else{
@@ -1299,6 +1407,14 @@ player.shots=1;
 player.damage=10;
 
 player.fireRate=.28/2;
+
+player.bulletSpeed=480;
+
+player.maxAmmo=8;
+player.ammo=8;
+player.reloadTime=2;
+player.reloadTimer=0;
+player.reloading=false;
 
 }
 
@@ -1356,6 +1472,17 @@ u=>u.name!=="+2 Scatter"
 else{
 
 pool=[...fastPewPewUpgrades];
+
+
+// Velocity Boost can only be taken twice.
+
+if(player.fastVelocityUpgrades>=2){
+
+pool=pool.filter(
+u=>u.name!=="Velocity Boost"
+);
+
+}
 
 }
 
@@ -1566,6 +1693,10 @@ W-100,
 );
 
 
+// =========================
+// XP BAR
+// =========================
+
 ctx.fillStyle="#65e6ff";
 
 ctx.fillRect(
@@ -1605,6 +1736,10 @@ Math.floor(xp)+" / "+xpNext+" XP",
 );
 
 
+// =========================
+// HP BAR
+// =========================
+
 ctx.fillStyle="#32141a";
 
 ctx.fillRect(
@@ -1626,6 +1761,39 @@ player.hp/player.maxHp
 ),
 10
 );
+
+
+// =========================
+// AMMO DISPLAY
+// =========================
+
+if(player.weapon==="fast"){
+
+ctx.fillStyle="#fff";
+
+ctx.font="bold 11px system-ui";
+
+if(player.reloading){
+
+ctx.fillText(
+"RELOADING "+player.reloadTimer.toFixed(1)+"s",
+16,
+82
+);
+
+}
+
+else{
+
+ctx.fillText(
+"AMMO "+player.ammo+" / "+player.maxAmmo,
+16,
+82
+);
+
+}
+
+}
 
 
 ctx.textAlign="center";
@@ -1877,6 +2045,10 @@ W-63,
 );
 
 
+// =========================
+// AIM JOYSTICK
+// =========================
+
 aimJoystickPos();
 
 ctx.globalAlpha=.75;
@@ -1929,6 +2101,10 @@ aimJoy.x,
 aimJoy.y+4
 );
 
+
+// =========================
+// MOVE JOYSTICK
+// =========================
 
 joystickPos();
 
