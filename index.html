@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html>
 <head>
@@ -76,16 +77,28 @@ r:15,
 hp:100,
 maxHp:100,
 
-shots:1,
 damage:20,
 speed:110,
 magnet:70,
 bulletSpeed:480,
+
+// Base fire rate.
+// Lower number = faster.
 fireRate:.28,
+
+shots:1,
 
 aim:0,
 aimTarget:0,
-aimSensitivity:.5
+aimSensitivity:.5,
+
+weapon:null,
+
+// Shotgun upgrades
+shotgunPlus2:0,
+
+// Rifle upgrades
+rifleDamageUpgrades:0
 };
 
 
@@ -114,8 +127,12 @@ let level=1;
 let xpNext=100;
 
 let paused=false;
+
 let upgradeChoices=[];
 let upgradeOpen=false;
+
+let weaponChoiceOpen=false;
+
 let gameOver=false;
 
 
@@ -151,33 +168,48 @@ knobR:24
 
 
 // =========================
-// UPGRADES
+// NORMAL UPGRADES
 // =========================
 
-const upgrades=[
+const rifleUpgrades=[
+
+{
+name:"Rifle Damage",
+desc:"Increase damage by 50%",
+apply:()=>{
+player.damage*=1.5;
+player.rifleDamageUpgrades++;
+}
+},
 
 {
 name:"Double Shot",
 desc:"Fire 2 bullets at a time",
-apply:()=>player.shots*=2
-},
+apply:()=>{
+player.shots*=2;
+}
+}
+
+];
+
+
+const shotgunUpgrades=[
 
 {
-name:"Rapid Fire",
-desc:"Fire twice as fast",
-apply:()=>player.fireRate*=.5
-},
-
-{
-name:"Triple Velocity",
-desc:"Bullets move 3× faster",
-apply:()=>player.bulletSpeed*=3
+name:"+2 Pellets",
+desc:"Fire 2 additional pellets",
+apply:()=>{
+player.shots+=2;
+player.shotgunPlus2++;
+}
 },
 
 {
 name:"Double Damage",
 desc:"Bullets deal 2× damage",
-apply:()=>player.damage*=2
+apply:()=>{
+player.damage*=2;
+}
 }
 
 ];
@@ -235,22 +267,27 @@ function reset(){
 updateArena();
 
 player.x=W/2;
-player.y=(arena.top+arena.bottom+H)/2;
+player.y=(arena.top+H-arena.bottom)/2;
 
 player.hp=100;
 player.maxHp=100;
 
-player.shots=1;
 player.damage=20;
 player.speed=110;
 player.magnet=70;
-
 player.bulletSpeed=480;
+
 player.fireRate=.28;
+player.shots=1;
 
 player.aim=0;
 player.aimTarget=0;
 player.aimSensitivity=.5;
+
+player.weapon=null;
+
+player.shotgunPlus2=0;
+player.rifleDamageUpgrades=0;
 
 enemies=[];
 shots=[];
@@ -272,8 +309,12 @@ level=1;
 xpNext=100;
 
 paused=false;
+
 upgradeChoices=[];
 upgradeOpen=false;
+
+weaponChoiceOpen=false;
+
 gameOver=false;
 
 joy.on=false;
@@ -301,8 +342,6 @@ const side=Math.floor(Math.random()*4);
 
 let x;
 let y;
-
-// Enemies spawn outside the barrier.
 
 if(side===0){
 x=arena.left-35;
@@ -435,7 +474,8 @@ y<=44;
 
 }
 
-function pointInUpgrade(x,y,i){
+
+function pointInCard(x,y,i){
 
 const gap=16;
 
@@ -450,7 +490,8 @@ const startX=(W-totalW)/2;
 
 const cardY=H/2-75;
 
-const xx=startX+i*(cardW+gap);
+const xx=
+startX+i*(cardW+gap);
 
 return x>=xx&&
 x<=xx+cardW&&
@@ -473,18 +514,38 @@ return;
 
 }
 
-if(!upgradeOpen&&pointInPause(e.clientX,e.clientY)){
 
-paused=!paused;
+// Weapon selection
+
+if(weaponChoiceOpen){
+
+for(let i=0;i<2;i++){
+
+if(pointInCard(
+e.clientX,
+e.clientY,
+i
+)){
+
+chooseWeapon(i);
 return;
 
 }
+
+}
+
+return;
+
+}
+
+
+// Upgrade selection
 
 if(upgradeOpen){
 
 for(let i=0;i<2;i++){
 
-if(pointInUpgrade(
+if(pointInCard(
 e.clientX,
 e.clientY,
 i
@@ -501,6 +562,21 @@ return;
 
 }
 
+
+if(pointInPause(
+e.clientX,
+e.clientY
+)){
+
+paused=!paused;
+return;
+
+}
+
+
+if(paused)return;
+
+
 joystickPos();
 aimJoystickPos();
 
@@ -514,12 +590,14 @@ e.clientX-joy.x,
 e.clientY-joy.y
 );
 
+
 if(
 ad<aimJoy.r+20&&
 !aimJoy.on
 ){
 
 aimJoy.on=true;
+
 aimJoy.pointerId=e.pointerId;
 
 setAimJoystick(
@@ -531,12 +609,14 @@ return;
 
 }
 
+
 if(
 jd<joy.r+20&&
 !joy.on
 ){
 
 joy.on=true;
+
 joy.pointerId=e.pointerId;
 
 setJoystick(
@@ -598,6 +678,7 @@ joy.ty=joy.y;
 
 }
 
+
 if(
 aimJoy.on&&
 e.pointerId===aimJoy.pointerId
@@ -649,7 +730,8 @@ function update(dt){
 if(
 gameOver||
 paused||
-upgradeOpen
+upgradeOpen||
+weaponChoiceOpen
 )return;
 
 
@@ -670,8 +752,6 @@ dy*player.speed*dt;
 
 }
 
-
-// Player cannot leave arena.
 
 player.x=Math.max(
 arena.left+18,
@@ -734,7 +814,7 @@ startWave();
 
 
 // -------------------------
-// SPAWN WAVE ENEMIES
+// SPAWN
 // -------------------------
 
 if(
@@ -774,7 +854,7 @@ completeWave();
 
 
 // -------------------------
-// PLAYER SHOOTING
+// SHOOTING
 // -------------------------
 
 shoot-=dt;
@@ -785,6 +865,54 @@ aimJoy.on
 ){
 
 const a=player.aim;
+
+
+// Shotgun uses a tight cone.
+// Rifle/basic weapon uses normal
+// centered shots.
+
+if(player.weapon==="shotgun"){
+
+const spread=.055;
+
+for(
+let i=0;
+i<player.shots;
+i++
+){
+
+let offset=
+(i-(player.shots-1)/2)*
+spread;
+
+const aa=a+offset;
+
+shots.push({
+
+x:player.x,
+y:player.y,
+
+vx:
+Math.cos(aa)*
+player.bulletSpeed,
+
+vy:
+Math.sin(aa)*
+player.bulletSpeed,
+
+r:5,
+
+life:1.5,
+
+damage:player.damage
+
+});
+
+}
+
+}
+
+else{
 
 for(
 let i=0;
@@ -816,6 +944,8 @@ life:1.5,
 damage:player.damage
 
 });
+
+}
 
 }
 
@@ -900,7 +1030,7 @@ s.y+=s.vy*dt;
 s.life-=dt;
 
 
-// Bullets hit the vision barrier.
+// Barrier stops player bullets.
 
 if(
 s.x<arena.left||
@@ -937,6 +1067,7 @@ s.r+player.r
 ){
 
 player.hp-=15;
+
 s.life=0;
 
 }
@@ -945,7 +1076,7 @@ s.life=0;
 
 
 // -------------------------
-// BULLET / ENEMY COLLISION
+// BULLET COLLISIONS
 // -------------------------
 
 for(const s of shots){
@@ -971,10 +1102,8 @@ if(e.hp<=0){
 score+=10;
 
 orbs.push({
-
 x:e.x,
 y:e.y
-
 });
 
 }
@@ -1020,15 +1149,6 @@ o.x-player.x,
 o.y-player.y
 );
 
-
-// XP now ALWAYS moves toward player.
-//
-// Far away = slow.
-// Close = much faster.
-//
-// Speed increases dramatically
-// as distance decreases.
-
 const maxDistance=Math.hypot(
 W,
 H
@@ -1040,15 +1160,9 @@ const closeness=
 dist/maxDistance
 );
 
-
-// Base speed plus acceleration.
-
 const speed=
 25+
 Math.pow(closeness,2)*475;
-
-
-// Move toward player.
 
 if(dist>.1){
 
@@ -1067,13 +1181,14 @@ dt;
 }
 
 
-// Collect XP.
-
 if(dist<18){
 
 o.dead=true;
 
 xp+=25;
+
+
+// Level-up
 
 while(xp>=xpNext){
 
@@ -1086,7 +1201,20 @@ Math.floor(
 xpNext*1.25
 );
 
+
+// Level 2 is the weapon choice.
+
+if(level===2){
+
+openWeaponChoice();
+
+}
+
+else{
+
 openUpgrades();
+
+}
 
 break;
 
@@ -1115,7 +1243,69 @@ gameOver=true;
 
 
 // =========================
-// UPGRADES
+// WEAPON CHOICE
+// =========================
+
+function openWeaponChoice(){
+
+weaponChoiceOpen=true;
+
+paused=false;
+
+}
+
+
+// =========================
+// CHOOSE WEAPON
+// =========================
+
+function chooseWeapon(i){
+
+if(!weaponChoiceOpen)return;
+
+
+if(i===0){
+
+// SHOTGUN
+
+player.weapon="shotgun";
+
+player.shots=1;
+
+// Twice as slow.
+
+player.fireRate=.28*2;
+
+}
+
+else{
+
+// RIFLE
+
+player.weapon="rifle";
+
+player.shots=1;
+
+// Twice as fast.
+
+player.fireRate=.28/2;
+
+// Half normal damage.
+
+player.damage=20*.5;
+
+}
+
+
+weaponChoiceOpen=false;
+
+shoot=0;
+
+}
+
+
+// =========================
+// NORMAL UPGRADES
 // =========================
 
 function openUpgrades(){
@@ -1126,10 +1316,48 @@ paused=false;
 
 upgradeChoices=[];
 
-const pool=[...upgrades];
+
+// Choose pool based on weapon.
+
+let pool;
+
+if(player.weapon==="shotgun"){
+
+pool=[...shotgunUpgrades];
+
+
+// +2 can only appear twice.
+
+if(player.shotgunPlus2>=2){
+
+pool=pool.filter(
+u=>u.name!=="+2 Pellets"
+);
+
+}
+
+}
+
+else{
+
+pool=[...rifleUpgrades];
+
+}
+
+
+// Safety.
+
+if(pool.length===0){
+
+upgradeOpen=false;
+return;
+
+}
+
 
 while(
-upgradeChoices.length<2
+upgradeChoices.length<2&&
+pool.length>0
 ){
 
 const i=
@@ -1145,6 +1373,10 @@ pool.splice(i,1)[0]
 
 }
 
+
+// =========================
+// CHOOSE UPGRADE
+// =========================
 
 function chooseUpgrade(i){
 
@@ -1177,7 +1409,8 @@ function togglePause(){
 
 if(
 gameOver||
-upgradeOpen
+upgradeOpen||
+weaponChoiceOpen
 )return;
 
 paused=!paused;
@@ -1191,9 +1424,7 @@ paused=!paused;
 
 function draw(){
 
-// -------------------------
-// BACKGROUND
-// -------------------------
+// Background
 
 ctx.fillStyle="#080a10";
 
@@ -1205,9 +1436,7 @@ H
 );
 
 
-// -------------------------
-// OUTSIDE VISION
-// -------------------------
+// Outside vision
 
 ctx.fillStyle="#020308";
 
@@ -1240,9 +1469,7 @@ H-arena.top-arena.bottom
 );
 
 
-// -------------------------
-// ARENA GRID
-// -------------------------
+// Arena grid
 
 ctx.save();
 
@@ -1268,15 +1495,8 @@ x+=40
 
 ctx.beginPath();
 
-ctx.moveTo(
-x,
-arena.top
-);
-
-ctx.lineTo(
-x,
-H-arena.bottom
-);
+ctx.moveTo(x,arena.top);
+ctx.lineTo(x,H-arena.bottom);
 
 ctx.stroke();
 
@@ -1290,15 +1510,8 @@ y+=40
 
 ctx.beginPath();
 
-ctx.moveTo(
-arena.left,
-y
-);
-
-ctx.lineTo(
-arena.right,
-y
-);
+ctx.moveTo(arena.left,y);
+ctx.lineTo(arena.right,y);
 
 ctx.stroke();
 
@@ -1307,9 +1520,7 @@ ctx.stroke();
 ctx.restore();
 
 
-// -------------------------
-// ARENA BARRIER
-// -------------------------
+// Arena barrier
 
 ctx.strokeStyle="#65e6ff";
 ctx.lineWidth=3;
@@ -1332,9 +1543,7 @@ H-arena.top-arena.bottom-10
 );
 
 
-// -------------------------
 // UI
-// -------------------------
 
 ctx.fillStyle="#fff";
 ctx.font="bold 15px system-ui";
@@ -1352,7 +1561,7 @@ W-100,
 );
 
 
-// XP BAR
+// XP
 
 ctx.fillStyle="#65e6ff";
 
@@ -1375,6 +1584,7 @@ xp/xpNext
 );
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 11px system-ui";
 
 ctx.fillText(
@@ -1392,7 +1602,7 @@ Math.floor(xp)+" / "+xpNext+" XP",
 );
 
 
-// HP BAR
+// HP
 
 ctx.fillStyle="#32141a";
 
@@ -1417,13 +1627,14 @@ player.hp/player.maxHp
 );
 
 
-// WAVE STATUS
+// Wave status
 
 ctx.textAlign="center";
 
 if(waveBreakTimer>0){
 
 ctx.fillStyle="#65e6ff";
+
 ctx.font="bold 11px system-ui";
 
 ctx.fillText(
@@ -1437,6 +1648,7 @@ W/2,
 else if(waveSpawned<waveTotal){
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
@@ -1456,6 +1668,7 @@ enemies.length>0
 ){
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
@@ -1469,9 +1682,7 @@ W/2,
 ctx.textAlign="left";
 
 
-// =========================
 // XP ORBS
-// =========================
 
 for(const o of orbs){
 
@@ -1492,9 +1703,7 @@ ctx.fill();
 }
 
 
-// =========================
-// ENEMY BULLETS
-// =========================
+// Enemy bullets
 
 for(const s of enemyShots){
 
@@ -1515,9 +1724,7 @@ ctx.fill();
 }
 
 
-// =========================
-// PLAYER BULLETS
-// =========================
+// Player bullets
 
 for(const s of shots){
 
@@ -1538,9 +1745,7 @@ ctx.fill();
 }
 
 
-// =========================
-// ENEMIES
-// =========================
+// Enemies
 
 for(const e of enemies){
 
@@ -1552,9 +1757,6 @@ e.y-14,
 28,
 28
 );
-
-
-// Eyes
 
 ctx.fillStyle="#111";
 
@@ -1572,9 +1774,6 @@ e.y-4,
 5
 );
 
-
-// Mouth
-
 ctx.fillStyle="#fff";
 
 ctx.fillRect(
@@ -1585,7 +1784,7 @@ e.y+5,
 );
 
 
-// HP BAR
+// HP
 
 ctx.fillStyle="#222";
 
@@ -1612,9 +1811,7 @@ e.hp/getWaveEnemyHealth(wave)
 }
 
 
-// =========================
-// PLAYER
-// =========================
+// Player
 
 ctx.save();
 
@@ -1624,6 +1821,7 @@ player.y
 );
 
 ctx.shadowBlur=14;
+
 ctx.shadowColor="#42d9ff";
 
 ctx.fillStyle="#42d9ff";
@@ -1659,9 +1857,7 @@ ctx.fill();
 ctx.restore();
 
 
-// =========================
-// PAUSE BUTTON
-// =========================
+// Pause button
 
 ctx.fillStyle="#202838";
 
@@ -1673,6 +1869,7 @@ W-110,
 );
 
 ctx.strokeStyle="#6fe7ff";
+
 ctx.lineWidth=2;
 
 ctx.strokeRect(
@@ -1683,6 +1880,7 @@ W-110,
 );
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 12px system-ui";
 
 ctx.textAlign="center";
@@ -1694,9 +1892,7 @@ W-63,
 );
 
 
-// =========================
-// AIM JOYSTICK
-// =========================
+// Aim joystick
 
 aimJoystickPos();
 
@@ -1717,6 +1913,7 @@ Math.PI*2
 ctx.fill();
 
 ctx.strokeStyle="#6fe7ff";
+
 ctx.lineWidth=2;
 
 ctx.stroke();
@@ -1740,6 +1937,7 @@ ctx.fill();
 ctx.globalAlpha=1;
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
@@ -1749,9 +1947,7 @@ aimJoy.y+4
 );
 
 
-// =========================
-// MOVE JOYSTICK
-// =========================
+// Move joystick
 
 joystickPos();
 
@@ -1772,6 +1968,7 @@ Math.PI*2
 ctx.fill();
 
 ctx.strokeStyle="#6fe7ff";
+
 ctx.lineWidth=2;
 
 ctx.stroke();
@@ -1795,6 +1992,7 @@ ctx.fill();
 ctx.globalAlpha=1;
 
 ctx.fillStyle="#fff";
+
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
@@ -1807,7 +2005,134 @@ ctx.textAlign="left";
 
 
 // =========================
-// UPGRADE SCREEN
+// WEAPON SELECTION
+// =========================
+
+if(weaponChoiceOpen){
+
+ctx.fillStyle="#000d";
+
+ctx.fillRect(
+0,
+0,
+W,
+H
+);
+
+ctx.fillStyle="#fff";
+
+ctx.textAlign="center";
+
+ctx.font="bold 27px system-ui";
+
+ctx.fillText(
+"CHOOSE YOUR WEAPON",
+W/2,
+H/2-120
+);
+
+
+const gap=16;
+
+const cardW=Math.min(
+300,
+(W-32-gap)/2
+);
+
+const totalW=
+cardW*2+gap;
+
+const startX=
+(W-totalW)/2;
+
+const cardY=
+H/2-75;
+
+
+const weaponCards=[
+
+{
+name:"SHOTGUN",
+desc:"Slow fire • Tight spread"
+},
+
+{
+name:"RIFLE",
+desc:"Fast fire • Half damage"
+}
+
+];
+
+
+for(
+let i=0;
+i<2;
+i++
+){
+
+const card=
+weaponCards[i];
+
+const x=
+startX+
+i*(cardW+gap);
+
+
+ctx.fillStyle="#182130";
+
+ctx.fillRect(
+x,
+cardY,
+cardW,
+150
+);
+
+ctx.strokeStyle="#6fe7ff";
+
+ctx.lineWidth=2;
+
+ctx.strokeRect(
+x,
+cardY,
+cardW,
+150
+);
+
+ctx.fillStyle="#fff";
+
+ctx.font="bold 20px system-ui";
+
+ctx.fillText(
+card.name,
+x+cardW/2,
+cardY+50
+);
+
+ctx.font="13px system-ui";
+
+ctx.fillText(
+card.desc,
+x+cardW/2,
+cardY+82
+);
+
+ctx.font="11px system-ui";
+
+ctx.fillText(
+"TAP TO SELECT",
+x+cardW/2,
+cardY+120
+);
+
+}
+
+ctx.textAlign="left";
+
+}
+
+
+// =========================
+// LEVEL UP
 // =========================
 
 if(upgradeOpen){
@@ -1833,6 +2158,7 @@ W/2,
 H/2-110
 );
 
+
 const gap=16;
 
 const cardW=Math.min(
@@ -1849,17 +2175,20 @@ const startX=
 const cardY=
 H/2-75;
 
+
 for(
 let i=0;
-i<2;
+i<upgradeChoices.length;
 i++
 ){
 
-const u=upgradeChoices[i];
+const u=
+upgradeChoices[i];
 
 const x=
 startX+
 i*(cardW+gap);
+
 
 ctx.fillStyle="#182130";
 
@@ -1871,6 +2200,7 @@ cardW,
 );
 
 ctx.strokeStyle="#6fe7ff";
+
 ctx.lineWidth=2;
 
 ctx.strokeRect(
@@ -1919,7 +2249,8 @@ ctx.textAlign="left";
 
 if(
 paused&&
-!upgradeOpen
+!upgradeOpen&&
+!weaponChoiceOpen
 ){
 
 ctx.fillStyle="#0008";
@@ -2033,3 +2364,4 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
+```
