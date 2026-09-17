@@ -67,7 +67,9 @@ bottom:22
 };
 
 function updateArena(){
+
 arena.right=W-22;
+
 }
 
 
@@ -104,7 +106,6 @@ weapon:null,
 
 scatterTier:1,
 scatterPierce:false,
-
 scatterDamage:20,
 scatterFireRate:1.5,
 
@@ -207,10 +208,6 @@ knobR:24
 };
 
 
-// =========================
-// TOUCH INPUT
-// =========================
-
 let moveTouchId=null;
 let aimTouchId=null;
 
@@ -227,13 +224,13 @@ player.shots=1;
 
 player.damage=20;
 
-player.scatterDamage=20;
-
-player.scatterFireRate=1.5;
-
 player.scatterTier=1;
 
 player.scatterPierce=false;
+
+player.scatterDamage=20;
+
+player.scatterFireRate=1.5;
 
 player.fireRate=1.5;
 
@@ -300,13 +297,13 @@ tier:2,
 
 name:"Scatter Blaster Tier 2",
 
-desc:"+1 shot fired and increase damage to 30",
+desc:"+1 shot fired. Damage increases from 20 to 30.",
 
 apply:()=>{
 
 player.scatterTier=2;
 
-player.shots+=1;
+player.shots=2;
 
 player.damage=30;
 
@@ -322,13 +319,13 @@ tier:3,
 
 name:"Scatter Blaster Tier 3",
 
-desc:"+1 shot fired and increase damage to 40",
+desc:"+1 shot fired. Damage increases from 30 to 40.",
 
 apply:()=>{
 
 player.scatterTier=3;
 
-player.shots+=1;
+player.shots=3;
 
 player.damage=40;
 
@@ -344,13 +341,13 @@ tier:4,
 
 name:"Scatter Blaster Tier 4",
 
-desc:"+1 shot fired and increase damage to 50",
+desc:"+1 shot fired. Damage increases from 40 to 50.",
 
 apply:()=>{
 
 player.scatterTier=4;
 
-player.shots+=1;
+player.shots=4;
 
 player.damage=50;
 
@@ -366,13 +363,13 @@ tier:5,
 
 name:"Scatter Blaster Tier 5",
 
-desc:"+1 shot and bullets pierce 1 enemy",
+desc:"+1 shot fired. Bullets pierce 1 enemy and lose half their damage.",
 
 apply:()=>{
 
 player.scatterTier=5;
 
-player.shots+=1;
+player.shots=5;
 
 player.damage=50;
 
@@ -390,15 +387,23 @@ tier:6,
 
 name:"Scatter Blaster Tier 6",
 
-desc:"Reduce fire cooldown from 1.5 to 1 second",
+desc:"Fire cooldown decreases from 1.5 seconds to 1 second.",
 
 apply:()=>{
 
 player.scatterTier=6;
 
+player.shots=5;
+
+player.damage=50;
+
+player.scatterDamage=50;
+
 player.scatterFireRate=1;
 
 player.fireRate=1;
+
+player.scatterPierce=true;
 
 }
 
@@ -410,8 +415,7 @@ player.fireRate=1;
 // =========================
 // FAST UPGRADES
 // =========================
-// Kept as placeholders for now.
-// Scatter Blaster is the weapon being tested.
+// Left untouched for now.
 
 const fastPewPewUpgrades=[
 
@@ -469,7 +473,6 @@ desc:"Increase maximum ammo by 2",
 apply:()=>{
 
 player.maxAmmo+=2;
-
 player.ammo+=2;
 
 player.ammo=Math.min(
@@ -589,7 +592,6 @@ player.x=W/2;
 player.y=
 (arena.top+H-arena.bottom)/2;
 
-
 player.hp=100;
 player.maxHp=100;
 
@@ -617,34 +619,24 @@ player.weapon=null;
 // Scatter
 
 player.scatterTier=1;
-
 player.scatterPierce=false;
-
 player.scatterDamage=20;
-
 player.scatterFireRate=1.5;
 
 
 // Fast
 
 player.fastDamageUpgrades=0;
-
 player.fastAttackSpeedUpgrades=0;
-
 player.fastVelocityUpgrades=0;
-
 player.ammoCapacityUpgrades=0;
-
 player.reloadTimeUpgrades=0;
 
 player.maxAmmo=8;
-
 player.ammo=8;
 
 player.reloadTime=2;
-
 player.reloadTimer=0;
-
 player.reloading=false;
 
 
@@ -658,21 +650,15 @@ orbs=[];
 score=0;
 
 wave=1;
-
 waveTotal=0;
-
 waveSpawned=0;
-
 waveSpawnTimer=0;
-
 waveBreakTimer=0;
 
 shoot=0;
 
 xp=0;
-
 level=1;
-
 xpNext=100;
 
 paused=false;
@@ -707,7 +693,7 @@ aimJoy.tx=aimJoy.x;
 aimJoy.ty=aimJoy.y;
 
 
-// Apply starting weapon AFTER reset
+// Apply starting weapon
 
 applyEquippedWeapon();
 
@@ -846,13 +832,8 @@ let l=Math.hypot(dx,dy)||1;
 
 if(l>joy.r){
 
-dx=
-dx/l*
-joy.r;
-
-dy=
-dy/l*
-joy.r;
+dx=dx/l*joy.r;
+dy=dy/l*joy.r;
 
 }
 
@@ -880,13 +861,8 @@ let l=Math.hypot(dx,dy)||1;
 
 if(l>aimJoy.r){
 
-dx=
-dx/l*
-aimJoy.r;
-
-dy=
-dy/l*
-aimJoy.r;
+dx=dx/l*aimJoy.r;
+dy=dy/l*aimJoy.r;
 
 }
 
@@ -919,15 +895,10 @@ aimJoy.dx
 
 function pointInPlay(x,y){
 
-const bw=Math.min(
-260,
-W-60
-);
-
+const bw=Math.min(260,W-60);
 const bh=64;
 
 const bx=(W-bw)/2;
-
 const by=H/2+5;
 
 return(
@@ -942,15 +913,10 @@ y<=by+bh
 
 function pointInLoadoutButton(x,y){
 
-const bw=Math.min(
-260,
-W-60
-);
-
+const bw=Math.min(260,W-60);
 const bh=54;
 
 const bx=(W-bw)/2;
-
 const by=H/2+82;
 
 return(
@@ -965,15 +931,10 @@ y<=by+bh
 
 function pointInBackButton(x,y){
 
-const bw=Math.min(
-180,
-W-60
-);
-
+const bw=Math.min(180,W-60);
 const bh=50;
 
 const bx=(W-bw)/2;
-
 const by=H-85;
 
 return(
@@ -1031,7 +992,33 @@ y<=cardY+150
 
 
 // =========================
-// FIRE BASE ATTACK
+// SINGLE UPGRADE CARD
+// =========================
+
+function pointInSingleUpgradeCard(x,y){
+
+const cardW=Math.min(
+360,
+W-50
+);
+
+const cardH=180;
+
+const cardX=(W-cardW)/2;
+const cardY=H/2-75;
+
+return(
+x>=cardX&&
+x<=cardX+cardW&&
+y>=cardY&&
+y<=cardY+cardH
+);
+
+}
+
+
+// =========================
+// FIRE BASE
 // =========================
 
 function fireBase(){
@@ -1045,19 +1032,13 @@ return;
 
 const a=player.aim;
 
-
 shots.push({
 
 x:player.x,
 y:player.y,
 
-vx:
-Math.cos(a)*
-player.bulletSpeed,
-
-vy:
-Math.sin(a)*
-player.bulletSpeed,
+vx:Math.cos(a)*player.bulletSpeed,
+vy:Math.sin(a)*player.bulletSpeed,
 
 r:5,
 
@@ -1068,7 +1049,6 @@ damage:10,
 pierceLeft:0
 
 });
-
 
 shoot=player.fireRate;
 
@@ -1098,7 +1078,6 @@ return;
 
 const a=player.aim;
 
-
 for(
 let i=0;
 i<player.shots;
@@ -1108,8 +1087,7 @@ i++
 const aa=
 a+
 (
-i-
-(player.shots-1)/2
+i-(player.shots-1)/2
 )*.18;
 
 
@@ -1118,13 +1096,8 @@ shots.push({
 x:player.x,
 y:player.y,
 
-vx:
-Math.cos(aa)*
-player.bulletSpeed,
-
-vy:
-Math.sin(aa)*
-player.bulletSpeed,
+vx:Math.cos(aa)*player.bulletSpeed,
+vy:Math.sin(aa)*player.bulletSpeed,
 
 r:5,
 
@@ -1163,8 +1136,7 @@ player.ammo=0;
 
 player.reloading=true;
 
-player.reloadTimer=
-player.reloadTime;
+player.reloadTimer=player.reloadTime;
 
 }
 
@@ -1195,10 +1167,8 @@ i++
 
 const offset=
 (
-i-
-(player.shots-1)/2
-)*
-spread;
+i-(player.shots-1)/2
+)*spread;
 
 const aa=a+offset;
 
@@ -1208,13 +1178,8 @@ shots.push({
 x:player.x,
 y:player.y,
 
-vx:
-Math.cos(aa)*
-player.bulletSpeed,
-
-vy:
-Math.sin(aa)*
-player.bulletSpeed,
+vx:Math.cos(aa)*player.bulletSpeed,
+vy:Math.sin(aa)*player.bulletSpeed,
 
 r:5,
 
@@ -1236,7 +1201,7 @@ shoot=player.scatterFireRate;
 
 
 // =========================
-// HANDLE AIM TOUCH
+// AIM TOUCH
 // =========================
 
 function beginAimTouch(touch){
@@ -1252,10 +1217,7 @@ x-aimJoy.x,
 y-aimJoy.y
 );
 
-if(
-distance>
-aimJoy.r+30
-)
+if(distance>aimJoy.r+30)
 return false;
 
 aimTouchId=touch.identifier;
@@ -1264,8 +1226,6 @@ aimJoy.on=true;
 
 setAimJoystick(x,y);
 
-
-// FIRE IMMEDIATELY
 
 if(player.weapon===null){
 
@@ -1280,9 +1240,7 @@ player.weapon==="fast"&&
 fireFast();
 
 }
-else if(
-player.weapon==="scatter"
-){
+else if(player.weapon==="scatter"){
 
 fireScatter();
 
@@ -1294,7 +1252,7 @@ return true;
 
 
 // =========================
-// HANDLE MOVE TOUCH
+// MOVE TOUCH
 // =========================
 
 function beginMoveTouch(touch){
@@ -1310,10 +1268,7 @@ x-joy.x,
 y-joy.y
 );
 
-if(
-distance>
-joy.r+30
-)
+if(distance>joy.r+30)
 return false;
 
 moveTouchId=touch.identifier;
@@ -1338,9 +1293,7 @@ e=>{
 e.preventDefault();
 
 
-// =========================
-// TITLE / LOADOUT
-// =========================
+// MENU
 
 if(!started){
 
@@ -1357,9 +1310,7 @@ touch.clientY,
 ){
 
 equippedWeapon="scatter";
-
 loadoutOpen=false;
-
 return;
 
 }
@@ -1373,9 +1324,7 @@ touch.clientY,
 ){
 
 equippedWeapon="fast";
-
 loadoutOpen=false;
-
 return;
 
 }
@@ -1388,7 +1337,6 @@ touch.clientY
 ){
 
 loadoutOpen=false;
-
 return;
 
 }
@@ -1410,7 +1358,6 @@ touch.clientY
 ){
 
 startGame();
-
 return;
 
 }
@@ -1423,7 +1370,6 @@ touch.clientY
 ){
 
 loadoutOpen=true;
-
 return;
 
 }
@@ -1435,24 +1381,18 @@ return;
 }
 
 
-// =========================
 // GAME OVER
-// =========================
 
 if(gameOver){
 
 reset();
-
 startGame();
-
 return;
 
 }
 
 
-// =========================
 // WEAPON CHOICE
-// =========================
 
 if(weaponChoiceOpen){
 
@@ -1469,7 +1409,6 @@ i
 ){
 
 chooseWeapon(i);
-
 return;
 
 }
@@ -1483,42 +1422,32 @@ return;
 }
 
 
-// =========================
-// UPGRADES
-// =========================
+// UPGRADE
 
 if(upgradeOpen){
 
 for(const touch of e.changedTouches){
 
-for(let i=0;i<2;i++){
-
 if(
-pointInCard(
+pointInSingleUpgradeCard(
 touch.clientX,
-touch.clientY,
-i
+touch.clientY
 )
 ){
 
-chooseUpgrade(i);
-
+chooseUpgrade(0);
 return;
 
 }
 
 }
 
-}
-
 return;
 
 }
 
 
-// =========================
 // PAUSE
-// =========================
 
 for(const touch of e.changedTouches){
 
@@ -1530,7 +1459,6 @@ touch.clientY
 ){
 
 paused=!paused;
-
 return;
 
 }
@@ -1542,9 +1470,7 @@ if(paused)
 return;
 
 
-// =========================
-// FIND JOYSTICK TOUCH
-// =========================
+// JOYSTICKS
 
 for(const touch of e.changedTouches){
 
@@ -1586,8 +1512,7 @@ e.preventDefault();
 for(const touch of e.changedTouches){
 
 if(
-aimTouchId===
-touch.identifier
+aimTouchId===touch.identifier
 ){
 
 setAimJoystick(
@@ -1597,10 +1522,8 @@ touch.clientY
 
 }
 
-
 if(
-moveTouchId===
-touch.identifier
+moveTouchId===touch.identifier
 ){
 
 setJoystick(
@@ -1624,8 +1547,7 @@ touch.clientY
 function endTouch(touch){
 
 if(
-aimTouchId===
-touch.identifier
+aimTouchId===touch.identifier
 ){
 
 aimTouchId=null;
@@ -1644,8 +1566,7 @@ aimJoy.ty=aimJoy.y;
 
 
 if(
-moveTouchId===
-touch.identifier
+moveTouchId===touch.identifier
 ){
 
 moveTouchId=null;
@@ -1700,7 +1621,7 @@ endTouch(touch);
 
 
 // =========================
-// MOUSE / POINTER SUPPORT
+// POINTER DOWN
 // =========================
 
 c.addEventListener(
@@ -1712,8 +1633,6 @@ return;
 
 e.preventDefault();
 
-
-// Menu
 
 if(!started){
 
@@ -1729,16 +1648,10 @@ i
 )
 ){
 
-if(i===0){
-
-equippedWeapon="scatter";
-
-}
-else{
-
-equippedWeapon="fast";
-
-}
+equippedWeapon=
+i===0
+?"scatter"
+:"fast";
 
 loadoutOpen=false;
 
@@ -1756,7 +1669,6 @@ e.clientY
 ){
 
 loadoutOpen=false;
-
 return;
 
 }
@@ -1774,7 +1686,6 @@ e.clientY
 ){
 
 startGame();
-
 return;
 
 }
@@ -1787,7 +1698,6 @@ e.clientY
 ){
 
 loadoutOpen=true;
-
 return;
 
 }
@@ -1797,7 +1707,7 @@ return;
 }
 
 
-// Game over
+// GAME OVER
 
 if(gameOver){
 
@@ -1808,7 +1718,7 @@ return;
 }
 
 
-// Weapon choice
+// WEAPON CHOICE
 
 if(weaponChoiceOpen){
 
@@ -1834,33 +1744,28 @@ return;
 }
 
 
-// Upgrades
+// UPGRADE
 
 if(upgradeOpen){
 
-for(let i=0;i<2;i++){
-
 if(
-pointInCard(
+pointInSingleUpgradeCard(
 e.clientX,
-e.clientY,
-i
+e.clientY
 )
 ){
 
-chooseUpgrade(i);
+chooseUpgrade(0);
 return;
 
 }
 
-}
-
 return;
 
 }
 
 
-// Pause
+// PAUSE
 
 if(
 pointInPause(
@@ -1878,7 +1783,7 @@ if(paused)
 return;
 
 
-// Aim
+// AIM
 
 if(
 Math.hypot(
@@ -1903,9 +1808,7 @@ player.weapon==="fast"&&
 )
 fireFast();
 
-else if(
-player.weapon==="scatter"
-)
+else if(player.weapon==="scatter")
 fireScatter();
 
 return;
@@ -1913,7 +1816,7 @@ return;
 }
 
 
-// Move
+// MOVE
 
 if(
 Math.hypot(
@@ -2026,9 +1929,7 @@ weaponChoiceOpen
 return;
 
 
-// =========================
 // MOVEMENT
-// =========================
 
 if(
 Math.hypot(
@@ -2037,15 +1938,8 @@ joy.dy
 )>.05
 ){
 
-player.x+=
-joy.dx*
-player.speed*
-dt;
-
-player.y+=
-joy.dy*
-player.speed*
-dt;
+player.x+=joy.dx*player.speed*dt;
+player.y+=joy.dy*player.speed*dt;
 
 }
 
@@ -2067,26 +1961,18 @@ player.y
 );
 
 
-// =========================
-// AIM ROTATION
-// =========================
+// AIM
 
 if(aimJoy.on){
 
 let diff=
-player.aimTarget-
-player.aim;
+player.aimTarget-player.aim;
 
-while(
-diff>Math.PI
-)
+while(diff>Math.PI)
 diff-=Math.PI*2;
 
-while(
-diff<-Math.PI
-)
+while(diff<-Math.PI)
 diff+=Math.PI*2;
-
 
 player.aim+=
 diff*
@@ -2098,9 +1984,7 @@ dt*10*player.aimSensitivity
 }
 
 
-// =========================
 // WAVE BREAK
-// =========================
 
 if(waveBreakTimer>0){
 
@@ -2115,9 +1999,7 @@ startWave();
 }
 
 
-// =========================
 // SPAWN
-// =========================
 
 if(
 waveBreakTimer<=0&&
@@ -2140,9 +2022,7 @@ getWaveSpawnSpeed(wave);
 }
 
 
-// =========================
 // WAVE COMPLETE
-// =========================
 
 if(
 waveBreakTimer<=0&&
@@ -2155,9 +2035,7 @@ completeWave();
 }
 
 
-// =========================
 // FAST RELOAD
-// =========================
 
 if(
 player.weapon==="fast"&&
@@ -2166,9 +2044,7 @@ player.reloading
 
 player.reloadTimer-=dt;
 
-if(
-player.reloadTimer<=0
-){
+if(player.reloadTimer<=0){
 
 player.reloadTimer=0;
 
@@ -2182,16 +2058,12 @@ player.reloading=false;
 }
 
 
-// =========================
 // FIRE TIMER
-// =========================
 
 shoot-=dt;
 
 
-// =========================
-// BASE ATTACK
-// =========================
+// BASE
 
 if(
 player.weapon===null&&
@@ -2204,9 +2076,7 @@ fireBase();
 }
 
 
-// =========================
-// FAST PEW PEW
-// =========================
+// FAST
 
 if(
 player.weapon==="fast"&&
@@ -2220,9 +2090,7 @@ fireFast();
 }
 
 
-// =========================
-// SCATTER BLASTER
-// =========================
+// SCATTER
 
 if(
 player.weapon==="scatter"&&
@@ -2235,9 +2103,7 @@ fireScatter();
 }
 
 
-// =========================
 // ENEMIES
-// =========================
 
 for(const e of enemies){
 
@@ -2247,20 +2113,10 @@ player.y-e.y,
 player.x-e.x
 );
 
-
-e.x+=
-Math.cos(a)*
-e.speed*
-dt;
-
-e.y+=
-Math.sin(a)*
-e.speed*
-dt;
-
+e.x+=Math.cos(a)*e.speed*dt;
+e.y+=Math.sin(a)*e.speed*dt;
 
 e.shoot-=dt;
-
 
 if(e.shoot<=0){
 
@@ -2273,7 +2129,6 @@ vx:Math.cos(a)*130,
 vy:Math.sin(a)*130,
 
 r:6,
-
 life:5
 
 });
@@ -2294,29 +2149,22 @@ e.r+player.r
 
 player.hp-=25;
 
-e.x-=
-Math.cos(a)*25;
-
-e.y-=
-Math.sin(a)*25;
+e.x-=Math.cos(a)*25;
+e.y-=Math.sin(a)*25;
 
 }
 
 }
 
 
-// =========================
 // PLAYER SHOTS
-// =========================
 
 for(const s of shots){
 
 s.x+=s.vx*dt;
-
 s.y+=s.vy*dt;
 
 s.life-=dt;
-
 
 if(
 s.x<arena.left||
@@ -2332,18 +2180,14 @@ s.life=0;
 }
 
 
-// =========================
 // ENEMY SHOTS
-// =========================
 
 for(const s of enemyShots){
 
 s.x+=s.vx*dt;
-
 s.y+=s.vy*dt;
 
 s.life-=dt;
-
 
 if(
 Math.hypot(
@@ -2363,9 +2207,7 @@ s.life=0;
 }
 
 
-// =========================
 // COLLISIONS
-// =========================
 
 for(const s of shots){
 
@@ -2387,13 +2229,9 @@ s.r+e.r
 e.hp-=s.damage;
 
 
-// =========================
-// PIERCING
-// =========================
+// PIERCE
 
-if(
-s.pierceLeft>0
-){
+if(s.pierceLeft>0){
 
 s.damage*=.5;
 
@@ -2414,9 +2252,7 @@ break;
 }
 
 
-// =========================
-// ENEMY DEATH / ORBS
-// =========================
+// DEATHS
 
 for(const e of enemies){
 
@@ -2441,9 +2277,7 @@ y:e.y
 }
 
 
-// =========================
 // CLEANUP
-// =========================
 
 shots=shots.filter(
 s=>
@@ -2454,20 +2288,16 @@ s.y>arena.top&&
 s.y<H-arena.bottom
 );
 
-
 enemyShots=enemyShots.filter(
 s=>s.life>0
 );
-
 
 enemies=enemies.filter(
 e=>e.hp>0
 );
 
 
-// =========================
-// XP ORBS
-// =========================
+// XP
 
 for(const o of orbs){
 
@@ -2477,17 +2307,14 @@ o.x-player.x,
 o.y-player.y
 );
 
-
 const maxDistance=
 Math.hypot(W,H);
-
 
 const closeness=
 1-Math.min(
 1,
 dist/maxDistance
 );
-
 
 const speed=
 25+
@@ -2496,20 +2323,10 @@ closeness,
 2
 )*475;
 
-
 if(dist>.1){
 
-o.x+=
-(player.x-o.x)/
-dist*
-speed*
-dt;
-
-o.y+=
-(player.y-o.y)/
-dist*
-speed*
-dt;
+o.x+=(player.x-o.x)/dist*speed*dt;
+o.y+=(player.y-o.y)/dist*speed*dt;
 
 }
 
@@ -2533,9 +2350,7 @@ xpNext*1.25
 );
 
 
-// =========================
 // LEVEL 2
-// =========================
 
 if(level===2){
 
@@ -2558,9 +2373,7 @@ return;
 }
 
 
-// =========================
 // LEVEL 3+
-// =========================
 
 if(level>2){
 
@@ -2582,9 +2395,7 @@ o=>!o.dead
 );
 
 
-// =========================
 // GAME OVER
-// =========================
 
 if(player.hp<=0){
 
@@ -2612,28 +2423,21 @@ paused=false;
 }
 
 
-// =========================
-// CHOOSE WEAPON
-// =========================
-
 function chooseWeapon(i){
 
 if(!weaponChoiceOpen)
 return;
-
 
 if(i===0){
 
 equipScatterBlaster();
 
 }
-
 else{
 
 equipFastPewPew();
 
 }
-
 
 weaponChoiceOpen=false;
 
@@ -2647,41 +2451,48 @@ shoot=0;
 
 
 // =========================
-// NORMAL UPGRADES
+// OPEN UPGRADES
 // =========================
 
 function openUpgrades(){
 
-if(!player.weapon){
+upgradeChoices=[];
 
-openWeaponChoice();
-
-return;
-
-}
-
-
-upgradeOpen=true;
+upgradeOpen=false;
 
 weaponChoiceOpen=false;
 
 paused=false;
 
-upgradeChoices=[];
-
-let pool;
-
 
 // =========================
-// SCATTER TIERS
+// SCATTER
 // =========================
 
 if(player.weapon==="scatter"){
 
-pool=
-scatterTierUpgrades.filter(
-u=>u.tier===player.scatterTier+1
+const nextTier=
+player.scatterTier+1;
+
+const nextUpgrade=
+scatterTierUpgrades.find(
+u=>u.tier===nextTier
 );
+
+
+// Only ONE Scatter upgrade exists at a time.
+
+if(nextUpgrade){
+
+upgradeChoices.push(
+nextUpgrade
+);
+
+upgradeOpen=true;
+
+}
+
+return;
 
 }
 
@@ -2690,26 +2501,11 @@ u=>u.tier===player.scatterTier+1
 // FAST
 // =========================
 
-else{
+if(player.weapon==="fast"){
 
-pool=[
+let pool=[
 ...fastPewPewUpgrades
 ];
-
-
-if(
-player.fastVelocityUpgrades>=2
-){
-
-pool=
-pool.filter(
-u=>u.name!=="Velocity Boost"
-);
-
-}
-
-}
-
 
 while(
 upgradeChoices.length<2&&
@@ -2721,12 +2517,15 @@ Math.floor(
 Math.random()*pool.length
 );
 
-
 upgradeChoices.push(
 pool[i]
 );
 
 pool.splice(i,1);
+
+}
+
+upgradeOpen=true;
 
 }
 
@@ -2749,7 +2548,6 @@ return;
 upgradeChoices[i].apply();
 
 shots=[];
-
 enemyShots=[];
 
 upgradeChoices=[];
@@ -2778,7 +2576,6 @@ upgradeOpen||
 weaponChoiceOpen
 )
 return;
-
 
 paused=!paused;
 
@@ -2817,20 +2614,14 @@ H
 );
 
 
-// =========================
-// TITLE
-// =========================
-
 if(!loadoutOpen){
 
 ctx.save();
 
 ctx.shadowBlur=35;
-
 ctx.shadowColor="#42d9ff";
 
 ctx.fillStyle="#42d9ff";
-
 ctx.globalAlpha=.15;
 
 ctx.beginPath();
@@ -2857,7 +2648,6 @@ ctx.font=
 Math.min(58,W/8)+
 "px system-ui";
 
-
 ctx.fillText(
 "BULLETBOUND",
 W/2,
@@ -2869,7 +2659,6 @@ ctx.fillStyle="#7d8799";
 
 ctx.font="14px system-ui";
 
-
 ctx.fillText(
 "Survive. Adapt. Become stronger.",
 W/2,
@@ -2879,20 +2668,11 @@ H/2-40
 
 // PLAY
 
-const bw=
-Math.min(
-260,
-W-60
-);
-
+const bw=Math.min(260,W-60);
 const bh=64;
 
-const bx=
-(W-bw)/2;
-
-const by=
-H/2+5;
-
+const bx=(W-bw)/2;
+const by=H/2+5;
 
 ctx.fillStyle="#182130";
 
@@ -2902,7 +2682,6 @@ by,
 bw,
 bh
 );
-
 
 ctx.strokeStyle="#65e6ff";
 
@@ -2914,7 +2693,6 @@ by,
 bw,
 bh
 );
-
 
 ctx.fillStyle="#fff";
 
@@ -2929,20 +2707,11 @@ by+40
 
 // WEAPONS
 
-const wh=
-Math.min(
-260,
-W-60
-);
-
+const wh=Math.min(260,W-60);
 const whh=54;
 
-const wx=
-(W-wh)/2;
-
-const wy=
-H/2+82;
-
+const wx=(W-wh)/2;
+const wy=H/2+82;
 
 ctx.fillStyle="#121a28";
 
@@ -2952,7 +2721,6 @@ wy,
 wh,
 whh
 );
-
 
 ctx.strokeStyle="#394355";
 
@@ -2965,7 +2733,6 @@ wh,
 whh
 );
 
-
 ctx.fillStyle="#d9e2f0";
 
 ctx.font="bold 17px system-ui";
@@ -2977,7 +2744,7 @@ wy+34
 );
 
 
-// EQUIPPED TEXT
+// EQUIPPED
 
 ctx.fillStyle="#7d8799";
 
@@ -2985,19 +2752,11 @@ ctx.font="11px system-ui";
 
 let equippedText="EQUIPPED: NONE";
 
-if(equippedWeapon==="scatter"){
+if(equippedWeapon==="scatter")
+equippedText="EQUIPPED: SCATTER BLASTER";
 
-equippedText=
-"EQUIPPED: SCATTER BLASTER";
-
-}
-
-else if(equippedWeapon==="fast"){
-
-equippedText=
-"EQUIPPED: FAST PEW PEW";
-
-}
+if(equippedWeapon==="fast")
+equippedText="EQUIPPED: FAST PEW PEW";
 
 ctx.fillText(
 equippedText,
@@ -3020,7 +2779,7 @@ H-30
 
 
 // =========================
-// LOADOUT SCREEN
+// LOADOUT
 // =========================
 
 else{
@@ -3034,7 +2793,6 @@ W,
 H
 );
 
-
 ctx.fillStyle="#65e6ff";
 
 ctx.textAlign="center";
@@ -3043,7 +2801,6 @@ ctx.font=
 "bold "+
 Math.min(30,W/12)+
 "px system-ui";
-
 
 ctx.fillText(
 "CHOOSE STARTING WEAPON",
@@ -3059,17 +2816,14 @@ const cardW=Math.min(
 (W-32-gap)/2
 );
 
-const totalW=
-cardW*2+gap;
-
 const startX=
-(W-totalW)/2;
+(W-(cardW*2+gap))/2;
 
 const cardY=
 H/2-75;
 
 
-// SCATTER CARD
+// SCATTER
 
 ctx.fillStyle=
 equippedWeapon==="scatter"
@@ -3088,10 +2842,7 @@ equippedWeapon==="scatter"
 ?"#65e6ff"
 :"#394355";
 
-ctx.lineWidth=
-equippedWeapon==="scatter"
-?3
-:2;
+ctx.lineWidth=2;
 
 ctx.strokeRect(
 startX,
@@ -3099,7 +2850,6 @@ cardY,
 cardW,
 150
 );
-
 
 ctx.fillStyle="#fff";
 
@@ -3111,28 +2861,23 @@ startX+cardW/2,
 cardY+35
 );
 
-
 ctx.fillStyle="#9aa6b8";
 
 ctx.font="11px system-ui";
 
 ctx.fillText(
-"Wide spread shotgun",
+"20 damage • 1.5s cooldown",
 startX+cardW/2,
 cardY+65
 );
 
 ctx.fillText(
-"20 damage • 1.5s cooldown",
+"No ammo or reload",
 startX+cardW/2,
 cardY+85
 );
 
-
-ctx.fillStyle=
-equippedWeapon==="scatter"
-?"#65e6ff"
-:"#7d8799";
+ctx.fillStyle="#65e6ff";
 
 ctx.font="bold 12px system-ui";
 
@@ -3145,13 +2890,10 @@ cardY+125
 );
 
 
-// FAST CARD
+// FAST
 
 const fastX=
-startX+
-cardW+
-gap;
-
+startX+cardW+gap;
 
 ctx.fillStyle=
 equippedWeapon==="fast"
@@ -3170,10 +2912,7 @@ equippedWeapon==="fast"
 ?"#65e6ff"
 :"#394355";
 
-ctx.lineWidth=
-equippedWeapon==="fast"
-?3
-:2;
+ctx.lineWidth=2;
 
 ctx.strokeRect(
 fastX,
@@ -3181,7 +2920,6 @@ cardY,
 cardW,
 150
 );
-
 
 ctx.fillStyle="#fff";
 
@@ -3192,7 +2930,6 @@ ctx.fillText(
 fastX+cardW/2,
 cardY+35
 );
-
 
 ctx.fillStyle="#9aa6b8";
 
@@ -3210,11 +2947,7 @@ fastX+cardW/2,
 cardY+85
 );
 
-
-ctx.fillStyle=
-equippedWeapon==="fast"
-?"#65e6ff"
-:"#7d8799";
+ctx.fillStyle="#65e6ff";
 
 ctx.font="bold 12px system-ui";
 
@@ -3227,22 +2960,13 @@ cardY+125
 );
 
 
-// BACK BUTTON
+// BACK
 
-const backW=
-Math.min(
-180,
-W-60
-);
-
+const backW=Math.min(180,W-60);
 const backH=50;
 
-const backX=
-(W-backW)/2;
-
-const backY=
-H-85;
-
+const backX=(W-backW)/2;
+const backY=H-85;
 
 ctx.fillStyle="#121a28";
 
@@ -3254,8 +2978,6 @@ backH
 );
 
 ctx.strokeStyle="#394355";
-
-ctx.lineWidth=2;
 
 ctx.strokeRect(
 backX,
@@ -3276,7 +2998,6 @@ backY+32
 
 }
 
-
 ctx.textAlign="left";
 
 return;
@@ -3290,9 +3011,6 @@ return;
 
 updateArena();
 
-
-// Background
-
 ctx.fillStyle="#0b0f17";
 
 ctx.fillRect(
@@ -3303,7 +3021,7 @@ H-arena.top-arena.bottom
 );
 
 
-// Grid
+// GRID
 
 ctx.strokeStyle="#111925";
 
@@ -3320,7 +3038,6 @@ x+=grid
 ctx.beginPath();
 
 ctx.moveTo(x,arena.top);
-
 ctx.lineTo(x,H-arena.bottom);
 
 ctx.stroke();
@@ -3336,7 +3053,6 @@ y+=grid
 ctx.beginPath();
 
 ctx.moveTo(arena.left,y);
-
 ctx.lineTo(arena.right,y);
 
 ctx.stroke();
@@ -3344,7 +3060,7 @@ ctx.stroke();
 }
 
 
-// Arena border
+// BORDER
 
 ctx.strokeStyle="#263244";
 
@@ -3372,7 +3088,6 @@ ctx.fillText(
 28
 );
 
-
 ctx.fillStyle="#9aa6b8";
 
 ctx.font="12px system-ui";
@@ -3386,13 +3101,9 @@ ctx.fillText(
 
 // HP
 
-const hpW=Math.min(
-220,
-W*.38
-);
+const hpW=Math.min(220,W*.38);
 
 const hpX=28;
-
 const hpY=58;
 
 ctx.fillStyle="#222936";
@@ -3420,13 +3131,9 @@ player.hp/player.maxHp
 
 // XP
 
-const xpW=Math.min(
-220,
-W*.38
-);
+const xpW=Math.min(220,W*.38);
 
-const xpX=
-W-xpW-28;
+const xpX=W-xpW-28;
 
 ctx.fillStyle="#222936";
 
@@ -3521,6 +3228,7 @@ ctx.fillText(
 
 }
 
+
 else if(player.weapon==="fast"){
 
 ctx.fillStyle="#ffdf4d";
@@ -3528,7 +3236,9 @@ ctx.fillStyle="#ffdf4d";
 ctx.font="bold 12px system-ui";
 
 ctx.fillText(
-"AMMO "+player.ammo+" / "+player.maxAmmo,
+"AMMO "+player.ammo+
+" / "+
+player.maxAmmo,
 28,
 92
 );
@@ -3670,11 +3380,8 @@ ctx.fillStyle="#fff";
 ctx.beginPath();
 
 ctx.moveTo(18,0);
-
 ctx.lineTo(5,-6);
-
 ctx.lineTo(5,6);
-
 ctx.closePath();
 
 ctx.fill();
@@ -3683,7 +3390,7 @@ ctx.restore();
 
 
 // =========================
-// PAUSE BUTTON
+// PAUSE
 // =========================
 
 ctx.fillStyle="#121a28";
@@ -3726,9 +3433,6 @@ W-63,
 joystickPos();
 aimJoystickPos();
 
-
-// MOVE
-
 ctx.globalAlpha=
 joy.on?.35:.2;
 
@@ -3762,8 +3466,6 @@ Math.PI*2
 
 ctx.fill();
 
-
-// AIM
 
 ctx.globalAlpha=
 aimJoy.on?.35:.2;
@@ -3800,7 +3502,7 @@ ctx.fill();
 
 
 // =========================
-// WEAPON LEVEL-UP
+// WEAPON CHOICE
 // =========================
 
 if(weaponChoiceOpen){
@@ -3813,7 +3515,6 @@ ctx.fillRect(
 W,
 H
 );
-
 
 ctx.fillStyle="#fff";
 
@@ -3845,7 +3546,7 @@ const cardY=
 H/2-75;
 
 
-// Scatter
+// SCATTER
 
 ctx.fillStyle="#121a28";
 
@@ -3882,13 +3583,13 @@ ctx.fillStyle="#9aa6b8";
 ctx.font="11px system-ui";
 
 ctx.fillText(
-"Wide spread shotgun",
+"20 damage • 1.5s cooldown",
 startX+cardW/2,
 cardY+65
 );
 
 ctx.fillText(
-"20 damage • 1.5s cooldown",
+"No ammo or reload",
 startX+cardW/2,
 cardY+85
 );
@@ -3904,12 +3605,10 @@ cardY+125
 );
 
 
-// Fast
+// FAST
 
 const fastX=
-startX+
-cardW+
-gap;
+startX+cardW+gap;
 
 ctx.fillStyle="#121a28";
 
@@ -3983,7 +3682,6 @@ W,
 H
 );
 
-
 ctx.fillStyle="#65e6ff";
 
 ctx.textAlign="center";
@@ -3993,9 +3691,136 @@ ctx.font="bold 27px system-ui";
 ctx.fillText(
 "CHOOSE AN UPGRADE",
 W/2,
-H/2-110
+H/2-125
 );
 
+
+// =========================
+// SCATTER = ONE CARD
+// =========================
+
+if(
+player.weapon==="scatter"&&
+upgradeChoices[0]
+){
+
+const u=upgradeChoices[0];
+
+const cardW=Math.min(
+360,
+W-50
+);
+
+const cardH=180;
+
+const cardX=(W-cardW)/2;
+
+const cardY=H/2-75;
+
+
+ctx.fillStyle="#121a28";
+
+ctx.fillRect(
+cardX,
+cardY,
+cardW,
+cardH
+);
+
+ctx.strokeStyle="#65e6ff";
+
+ctx.lineWidth=3;
+
+ctx.strokeRect(
+cardX,
+cardY,
+cardW,
+cardH
+);
+
+
+ctx.fillStyle="#fff";
+
+ctx.font="bold 20px system-ui";
+
+ctx.fillText(
+u.name,
+W/2,
+cardY+50
+);
+
+
+ctx.fillStyle="#9aa6b8";
+
+ctx.font="13px system-ui";
+
+const words=u.desc.split(" ");
+
+let line="";
+let lines=[];
+
+for(const word of words){
+
+const test=
+line?
+line+" "+word:
+word;
+
+if(
+ctx.measureText(test).width>
+cardW-40
+){
+
+lines.push(line);
+
+line=word;
+
+}
+else{
+
+line=test;
+
+}
+
+}
+
+if(line)
+lines.push(line);
+
+
+for(
+let j=0;
+j<lines.length;
+j++
+){
+
+ctx.fillText(
+lines[j],
+W/2,
+cardY+82+j*19
+);
+
+}
+
+
+ctx.fillStyle="#65e6ff";
+
+ctx.font="bold 13px system-ui";
+
+ctx.fillText(
+"SELECT",
+W/2,
+cardY+150
+);
+
+}
+
+
+// =========================
+// FAST = OLD TWO-CARD SYSTEM
+// =========================
+
+else{
 
 const gap=16;
 
@@ -4026,11 +3851,9 @@ upgradeChoices[i];
 if(!u)
 continue;
 
-
 const xx=
 startX+
 i*(cardW+gap);
-
 
 ctx.fillStyle="#121a28";
 
@@ -4052,7 +3875,6 @@ cardW,
 150
 );
 
-
 ctx.fillStyle="#fff";
 
 ctx.font="bold 15px system-ui";
@@ -4063,59 +3885,15 @@ xx+cardW/2,
 cardY+40
 );
 
-
 ctx.fillStyle="#9aa6b8";
 
 ctx.font="11px system-ui";
 
-const words=
-u.desc.split(" ");
-
-let line="";
-let lines=[];
-
-for(const word of words){
-
-const test=
-line+
-(word===" "?"":" ")+
-word;
-
-if(
-ctx.measureText(test).width>
-cardW-25
-){
-
-lines.push(line);
-
-line=word;
-
-}
-else{
-
-line=test;
-
-}
-
-}
-
-if(line)
-lines.push(line);
-
-
-for(
-let j=0;
-j<lines.length;
-j++
-){
-
 ctx.fillText(
-lines[j],
+u.desc,
 xx+cardW/2,
-cardY+72+j*16
+cardY+75
 );
-
-}
 
 ctx.fillStyle="#65e6ff";
 
@@ -4126,6 +3904,8 @@ ctx.fillText(
 xx+cardW/2,
 cardY+128
 );
+
+}
 
 }
 
@@ -4242,7 +4022,6 @@ draw();
 requestAnimationFrame(loop);
 
 }
-
 
 requestAnimationFrame(loop);
 
