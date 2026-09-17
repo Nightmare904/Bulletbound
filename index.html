@@ -1,5 +1,5 @@
+```html
 <!doctype html>
-
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -21,7 +21,6 @@ width:100%;
 height:100%
 }
 </style>
-
 </head>
 
 <body>
@@ -95,6 +94,14 @@ weapon:null,
 
 // Scatter Blaster upgrades
 scatterPlus2:0,
+scatterDamageUpgrades:0,
+
+// Scatter Blaster ammo
+scatterMaxAmmo:8,
+scatterAmmo:8,
+scatterReloadTime:3,
+scatterReloadTimer:0,
+scatterReloading:false,
 
 // Fast Pew Pew upgrades
 fastDamageUpgrades:0,
@@ -145,6 +152,9 @@ let upgradeOpen=false;
 let weaponChoiceOpen=false;
 
 let gameOver=false;
+
+// Manual shotgun trigger
+let scatterShootRequest=false;
 
 
 // =========================
@@ -253,22 +263,23 @@ player.reloadTimeUpgrades++;
 const scatterBlasterUpgrades=[
 
 {
-name:"+2 Scatter",
-desc:"Fire 2 additional projectiles",
+name:"Damage",
+desc:"Increase damage by 50%",
 
 apply:()=>{
-player.shots+=2;
-player.scatterPlus2++;
+player.damage*=1.5;
+player.scatterDamageUpgrades++;
 }
 
 },
 
 {
-name:"Double Power",
-desc:"Projectiles deal 2× damage",
+name:"+2 Shots",
+desc:"Fire 2 additional projectiles per shot",
 
 apply:()=>{
-player.damage*=2;
+player.shots+=2;
+player.scatterPlus2++;
 }
 
 }
@@ -347,8 +358,17 @@ player.aimSensitivity=.5;
 
 player.weapon=null;
 
+// Scatter Blaster
 player.scatterPlus2=0;
+player.scatterDamageUpgrades=0;
 
+player.scatterMaxAmmo=8;
+player.scatterAmmo=8;
+player.scatterReloadTime=3;
+player.scatterReloadTimer=0;
+player.scatterReloading=false;
+
+// Fast Pew Pew
 player.fastDamageUpgrades=0;
 player.fastAttackSpeedUpgrades=0;
 player.fastVelocityUpgrades=0;
@@ -389,6 +409,8 @@ upgradeOpen=false;
 weaponChoiceOpen=false;
 
 gameOver=false;
+
+scatterShootRequest=false;
 
 joy.on=false;
 joy.pointerId=null;
@@ -548,6 +570,16 @@ y<=44;
 }
 
 
+function pointInShoot(x,y){
+
+return x>=W-110&&
+x<=W-16&&
+y>=52&&
+y<=96;
+
+}
+
+
 function pointInCard(x,y,i){
 
 const gap=16;
@@ -642,6 +674,30 @@ e.clientY
 )){
 
 paused=!paused;
+return;
+
+}
+
+
+// MANUAL SCATTER SHOOT BUTTON
+
+if(
+player.weapon==="scatter"&&
+pointInShoot(
+e.clientX,
+e.clientY
+)
+){
+
+if(
+!paused&&
+!player.scatterReloading
+){
+
+scatterShootRequest=true;
+
+}
+
 return;
 
 }
@@ -929,9 +985,34 @@ completeWave();
 }
 
 
-// -------------------------
-// AMMO RELOAD
-// -------------------------
+// =========================
+// SCATTER BLASTER RELOAD
+// =========================
+
+if(
+player.weapon==="scatter"&&
+player.scatterReloading
+){
+
+player.scatterReloadTimer-=dt;
+
+if(player.scatterReloadTimer<=0){
+
+player.scatterReloadTimer=0;
+
+player.scatterAmmo=
+player.scatterMaxAmmo;
+
+player.scatterReloading=false;
+
+}
+
+}
+
+
+// =========================
+// FAST PEW PEW RELOAD
+// =========================
 
 if(
 player.weapon==="fast"&&
@@ -953,21 +1034,23 @@ player.reloading=false;
 }
 
 
-// -------------------------
+// =========================
 // SHOOTING
-// -------------------------
+// =========================
 
 shoot-=dt;
 
+
+// =========================
+// FAST PEW PEW
+// =========================
+
 if(
+player.weapon==="fast"&&
 shoot<=0&&
 aimJoy.on&&
 !player.reloading
 ){
-
-// FAST PEW PEW
-
-if(player.weapon==="fast"){
 
 if(player.ammo<=0){
 
@@ -1016,15 +1099,9 @@ damage:player.damage
 
 }
 
-
-// One trigger cycle uses one ammo.
-
 player.ammo--;
 
 shoot=player.fireRate;
-
-
-// Begin reload immediately when empty.
 
 if(player.ammo<=0){
 
@@ -1039,9 +1116,34 @@ player.reloadTimer=player.reloadTime;
 }
 
 
+// =========================
 // SCATTER BLASTER
+// =========================
 
-else if(player.weapon==="scatter"){
+if(
+player.weapon==="scatter"&&
+scatterShootRequest&&
+shoot<=0&&
+!player.scatterReloading
+){
+
+scatterShootRequest=false;
+
+
+// If empty, start reload.
+
+if(player.scatterAmmo<=0){
+
+player.scatterAmmo=0;
+
+player.scatterReloading=true;
+
+player.scatterReloadTimer=
+player.scatterReloadTime;
+
+}
+
+else{
 
 const a=player.aim;
 
@@ -1082,7 +1184,27 @@ damage:player.damage
 
 }
 
-shoot=player.fireRate;
+
+// ONE trigger pull = ONE ammo,
+// regardless of how many projectiles fire.
+
+player.scatterAmmo--;
+
+shoot=1.5;
+
+
+// Begin reload after the last shell.
+
+if(player.scatterAmmo<=0){
+
+player.scatterAmmo=0;
+
+player.scatterReloading=true;
+
+player.scatterReloadTimer=
+player.scatterReloadTime;
+
+}
 
 }
 
@@ -1419,9 +1541,18 @@ player.shots=1;
 
 player.damage=20;
 
-player.fireRate=.28;
+player.fireRate=1.5;
 
 player.bulletSpeed=480;
+
+// Scatter ammo
+
+player.scatterMaxAmmo=8;
+player.scatterAmmo=8;
+
+player.scatterReloadTime=3;
+player.scatterReloadTimer=0;
+player.scatterReloading=false;
 
 }
 
@@ -1455,10 +1586,10 @@ player.reloading=false;
 weaponChoiceOpen=false;
 
 upgradeOpen=false;
-
 upgradeChoices=[];
 
 shoot=0;
+scatterShootRequest=false;
 
 }
 
@@ -1492,10 +1623,12 @@ if(player.weapon==="scatter"){
 pool=[...scatterBlasterUpgrades];
 
 
+// +2 Shots has a maximum of 2 upgrades.
+
 if(player.scatterPlus2>=2){
 
 pool=pool.filter(
-u=>u.name!=="+2 Scatter"
+u=>u.name!=="+2 Shots"
 );
 
 }
@@ -1543,10 +1676,6 @@ pool.splice(i,1);
 
 }
 
-
-// If only one upgrade remains,
-// show the one available upgrade.
-
 }
 
 
@@ -1575,6 +1704,7 @@ weaponChoiceOpen=false;
 paused=false;
 
 shoot=0;
+scatterShootRequest=false;
 
 }
 
@@ -1817,9 +1947,6 @@ ctx.fillText(
 83
 );
 
-
-// Reload bar
-
 ctx.fillStyle="#392f16";
 
 ctx.fillRect(
@@ -1869,13 +1996,90 @@ ctx.fillText(
 
 }
 
-
-// Weapon indicator
-
 ctx.font="10px system-ui";
 
 ctx.fillText(
 "FAST PEW PEW",
+16,
+108
+);
+
+}
+
+
+// SCATTER AMMO UI
+
+if(player.weapon==="scatter"){
+
+if(player.scatterReloading){
+
+ctx.fillStyle="#ffcf5c";
+
+ctx.font="bold 12px system-ui";
+
+ctx.fillText(
+"RELOADING...",
+16,
+83
+);
+
+ctx.fillStyle="#392f16";
+
+ctx.fillRect(
+16,
+88,
+150,
+6
+);
+
+ctx.fillStyle="#ffcf5c";
+
+const reloadProgress=
+1-
+Math.max(
+0,
+player.scatterReloadTimer/
+player.scatterReloadTime
+);
+
+ctx.fillRect(
+16,
+88,
+150*reloadProgress,
+6
+);
+
+ctx.font="10px system-ui";
+
+ctx.fillText(
+player.scatterReloadTimer.toFixed(1)+"s",
+172,
+94
+);
+
+}
+
+else{
+
+ctx.fillStyle="#fff";
+
+ctx.font="bold 12px system-ui";
+
+ctx.fillText(
+"AMMO "+
+player.scatterAmmo+
+" / "+
+player.scatterMaxAmmo,
+16,
+83
+);
+
+}
+
+ctx.font="10px system-ui";
+
+ctx.fillText(
+"SCATTER BLASTER",
 16,
 108
 );
@@ -2157,6 +2361,47 @@ W-63,
 
 
 // =========================
+// SCATTER SHOOT BUTTON
+// =========================
+
+if(player.weapon==="scatter"){
+
+ctx.fillStyle="#202838";
+
+ctx.fillRect(
+W-110,
+52,
+94,
+44
+);
+
+ctx.strokeStyle="#ffcf5c";
+
+ctx.lineWidth=2;
+
+ctx.strokeRect(
+W-110,
+52,
+94,
+44
+);
+
+ctx.fillStyle="#fff";
+
+ctx.font="bold 12px system-ui";
+
+ctx.fillText(
+player.scatterReloading?
+"RELOAD":
+"SHOOT",
+W-63,
+79
+);
+
+}
+
+
+// =========================
 // AIM JOYSTICK
 // =========================
 
@@ -2321,12 +2566,12 @@ const weaponCards=[
 
 {
 name:"SCATTER BLASTER",
-desc:"Slow fire • Tight spread"
+desc:"Slow fire • Manual spread"
 },
 
 {
 name:"FAST PEW PEW",
-desc:"Fast fire • Lower power"
+desc:"Fast fire • Automatic"
 }
 
 ];
@@ -2632,3 +2877,4 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
+```
