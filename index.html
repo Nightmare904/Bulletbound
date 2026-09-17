@@ -80,7 +80,9 @@ const player={
 
 x:0,
 y:0,
-r:11,
+
+// Smaller player
+r:8,
 
 hp:100,
 maxHp:100,
@@ -414,7 +416,6 @@ player.scatterPierce=true;
 // =========================
 // FAST UPGRADES
 // =========================
-// Left untouched for now.
 
 const fastPewPewUpgrades=[
 
@@ -593,6 +594,8 @@ player.y=
 
 player.hp=100;
 player.maxHp=100;
+
+player.r=8;
 
 player.damage=10;
 
@@ -773,6 +776,23 @@ y=H-arena.bottom+35;
 }
 
 
+// Different simple enemy personalities
+
+const faceTypes=[
+"angry",
+"goofy",
+"surprised",
+"sleepy"
+];
+
+const face=
+faceTypes[
+Math.floor(
+Math.random()*faceTypes.length
+)
+];
+
+
 enemies.push({
 
 x:x,
@@ -789,7 +809,9 @@ shoot:1+Math.random()*2,
 color:
 Math.random()<.5
 ?"#ff4f70"
-:"#a66cff"
+:"#a66cff",
+
+face:face
 
 });
 
@@ -2228,8 +2250,6 @@ s.r+e.r
 e.hp-=s.damage;
 
 
-// PIERCE
-
 if(s.pierceLeft>0){
 
 s.damage*=.5;
@@ -2349,8 +2369,6 @@ xpNext*1.25
 );
 
 
-// LEVEL 2
-
 if(level===2){
 
 if(!player.weapon){
@@ -2371,8 +2389,6 @@ return;
 
 }
 
-
-// LEVEL 3+
 
 if(level>2){
 
@@ -2464,10 +2480,6 @@ weaponChoiceOpen=false;
 paused=false;
 
 
-// =========================
-// SCATTER
-// =========================
-
 if(player.weapon==="scatter"){
 
 const nextTier=
@@ -2478,8 +2490,6 @@ scatterTierUpgrades.find(
 u=>u.tier===nextTier
 );
 
-
-// Only ONE Scatter upgrade exists at a time.
 
 if(nextUpgrade){
 
@@ -2495,10 +2505,6 @@ return;
 
 }
 
-
-// =========================
-// FAST
-// =========================
 
 if(player.weapon==="fast"){
 
@@ -2577,6 +2583,173 @@ weaponChoiceOpen
 return;
 
 paused=!paused;
+
+}
+
+
+// =========================
+// DRAW ENEMY FACE
+// =========================
+
+function drawEnemyFace(e){
+
+ctx.save();
+
+ctx.translate(e.x,e.y);
+
+
+// Face details are intentionally simple
+// so they remain readable on a phone.
+
+ctx.fillStyle="#111";
+
+
+if(e.face==="angry"){
+
+// Angry eyes
+
+ctx.lineWidth=2;
+
+ctx.strokeStyle="#111";
+
+ctx.beginPath();
+ctx.moveTo(-8,-5);
+ctx.lineTo(-2,-2);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(8,-5);
+ctx.lineTo(2,-2);
+ctx.stroke();
+
+
+// Frown
+
+ctx.beginPath();
+ctx.arc(
+0,
+6,
+5,
+Math.PI,
+Math.PI*2
+);
+
+ctx.stroke();
+
+}
+
+
+else if(e.face==="goofy"){
+
+// Big round eyes
+
+ctx.fillStyle="#fff";
+
+ctx.beginPath();
+ctx.arc(-5,-3,4,0,Math.PI*2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(5,-3,4,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle="#111";
+
+ctx.beginPath();
+ctx.arc(-5,-3,2,0,Math.PI*2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(5,-3,2,0,Math.PI*2);
+ctx.fill();
+
+
+// Smile
+
+ctx.beginPath();
+ctx.arc(
+0,
+2,
+6,
+0,
+Math.PI
+);
+
+ctx.strokeStyle="#111";
+ctx.lineWidth=2;
+ctx.stroke();
+
+}
+
+
+else if(e.face==="surprised"){
+
+// Dot eyes
+
+ctx.fillStyle="#111";
+
+ctx.beginPath();
+ctx.arc(-5,-4,2.5,0,Math.PI*2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(5,-4,2.5,0,Math.PI*2);
+ctx.fill();
+
+
+// Open mouth
+
+ctx.beginPath();
+
+ctx.arc(
+0,
+5,
+4,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+}
+
+
+else if(e.face==="sleepy"){
+
+// Closed eyes
+
+ctx.strokeStyle="#111";
+ctx.lineWidth=2;
+
+ctx.beginPath();
+ctx.moveTo(-8,-3);
+ctx.lineTo(-2,-3);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(2,-3);
+ctx.lineTo(8,-3);
+ctx.stroke();
+
+
+// Tiny mouth
+
+ctx.beginPath();
+
+ctx.arc(
+0,
+5,
+3,
+0,
+Math.PI
+);
+
+ctx.stroke();
+
+}
+
+
+ctx.restore();
 
 }
 
@@ -3077,6 +3250,8 @@ H-arena.top-arena.bottom
 // TOP UI
 // =========================
 
+// WAVE
+
 ctx.fillStyle="#dce6f5";
 
 ctx.font="bold 14px system-ui";
@@ -3086,6 +3261,9 @@ ctx.fillText(
 28,
 28
 );
+
+
+// SCORE
 
 ctx.fillStyle="#9aa6b8";
 
@@ -3098,12 +3276,17 @@ ctx.fillText(
 );
 
 
-// HP
+// =========================
+// HP PANEL
+// =========================
 
-const hpW=Math.min(220,W*.38);
+const hpW=Math.min(230,W*.40);
 
 const hpX=28;
 const hpY=58;
+
+
+// Label
 
 ctx.fillStyle="#9aa6b8";
 
@@ -3112,21 +3295,48 @@ ctx.textAlign="left";
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
-"HP "+Math.ceil(Math.max(0,player.hp))+" / "+player.maxHp,
+"HP",
 hpX,
-hpY-4
+hpY-7
 );
 
-ctx.fillStyle="#222936";
+
+// Numbers
+
+ctx.fillStyle="#dce6f5";
+
+ctx.font="bold 11px system-ui";
+
+ctx.fillText(
+Math.ceil(Math.max(0,player.hp))+
+" / "+
+player.maxHp,
+hpX+24,
+hpY-7
+);
+
+
+// Bar background
+
+ctx.fillStyle="#202734";
 
 ctx.fillRect(
 hpX,
 hpY,
 hpW,
-7
+9
 );
 
-ctx.fillStyle="#55e685";
+
+// Bar fill
+
+ctx.fillStyle=
+player.hp/player.maxHp>.5
+?"#55e685"
+:
+player.hp/player.maxHp>.25
+?"#ffcf4d"
+:"#ff4f70";
 
 ctx.fillRect(
 hpX,
@@ -3134,37 +3344,72 @@ hpY,
 hpW*
 Math.max(
 0,
+Math.min(
+1,
 player.hp/player.maxHp
+)
 ),
-7
+9
 );
 
 
-// XP
+// Bar border
 
-const xpW=Math.min(220,W*.38);
+ctx.strokeStyle="#3a4352";
+
+ctx.lineWidth=1;
+
+ctx.strokeRect(
+hpX,
+hpY,
+hpW,
+9
+);
+
+
+// =========================
+// XP PANEL
+// =========================
+
+const xpW=Math.min(230,W*.40);
 
 const xpX=W-xpW-28;
 
 ctx.fillStyle="#9aa6b8";
 
-ctx.textAlign="right";
+ctx.textAlign="left";
 
 ctx.font="bold 10px system-ui";
 
 ctx.fillText(
-"XP "+Math.floor(xp)+" / "+xpNext,
-xpX+xpW,
-hpY-4
+"XP",
+xpX,
+hpY-7
 );
 
-ctx.fillStyle="#222936";
+
+ctx.fillStyle="#dce6f5";
+
+ctx.font="bold 11px system-ui";
+
+ctx.fillText(
+Math.floor(xp)+
+" / "+
+xpNext,
+xpX+24,
+hpY-7
+);
+
+
+// XP bar
+
+ctx.fillStyle="#202734";
 
 ctx.fillRect(
 xpX,
 hpY,
 xpW,
-7
+9
 );
 
 ctx.fillStyle="#65e6ff";
@@ -3175,11 +3420,27 @@ hpY,
 xpW*
 Math.max(
 0,
+Math.min(
+1,
 xp/xpNext
+)
 ),
-7
+9
 );
 
+ctx.strokeStyle="#3a4352";
+
+ctx.lineWidth=1;
+
+ctx.strokeRect(
+xpX,
+hpY,
+xpW,
+9
+);
+
+
+// LEVEL
 
 ctx.fillStyle="#dce6f5";
 
@@ -3291,6 +3552,23 @@ Math.PI*2
 
 ctx.fill();
 
+
+// Orb center
+
+ctx.fillStyle="#dff9ff";
+
+ctx.beginPath();
+
+ctx.arc(
+o.x,
+o.y,
+2,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
 }
 
 
@@ -3346,6 +3624,8 @@ ctx.fill();
 
 for(const e of enemies){
 
+// Enemy body
+
 ctx.fillStyle=e.color;
 
 ctx.fillRect(
@@ -3356,33 +3636,23 @@ e.r*2
 );
 
 
-// LITTLE EYES
+// Small outline
 
-ctx.fillStyle="#111";
+ctx.strokeStyle="#111722";
 
-ctx.beginPath();
+ctx.lineWidth=2;
 
-ctx.arc(
-e.x-5,
-e.y-3,
-2.5,
-0,
-Math.PI*2
+ctx.strokeRect(
+e.x-e.r,
+e.y-e.r,
+e.r*2,
+e.r*2
 );
 
-ctx.fill();
 
-ctx.beginPath();
+// Face
 
-ctx.arc(
-e.x+5,
-e.y-3,
-2.5,
-0,
-Math.PI*2
-);
-
-ctx.fill();
+drawEnemyFace(e);
 
 }
 
@@ -3390,6 +3660,28 @@ ctx.fill();
 // =========================
 // PLAYER
 // =========================
+
+ctx.save();
+
+
+// Small shadow
+
+ctx.fillStyle="rgba(0,0,0,.35)";
+
+ctx.beginPath();
+
+ctx.arc(
+player.x+2,
+player.y+2,
+player.r,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+// Player body
 
 ctx.fillStyle="#42d9ff";
 
@@ -3406,7 +3698,16 @@ Math.PI*2
 ctx.fill();
 
 
-ctx.save();
+// Player outline
+
+ctx.strokeStyle="#b8f4ff";
+
+ctx.lineWidth=2;
+
+ctx.stroke();
+
+
+// Direction arrow
 
 ctx.translate(
 player.x,
@@ -3421,9 +3722,12 @@ ctx.fillStyle="#fff";
 
 ctx.beginPath();
 
-ctx.moveTo(18,0);
-ctx.lineTo(5,-6);
-ctx.lineTo(5,6);
+ctx.moveTo(14,0);
+
+ctx.lineTo(6,-4);
+
+ctx.lineTo(6,4);
+
 ctx.closePath();
 
 ctx.fill();
@@ -3737,9 +4041,7 @@ H/2-125
 );
 
 
-// =========================
 // SCATTER = ONE CARD
-// =========================
 
 if(
 player.weapon==="scatter"&&
@@ -3858,9 +4160,7 @@ cardY+150
 }
 
 
-// =========================
-// FAST = OLD TWO-CARD SYSTEM
-// =========================
+// FAST = TWO CARDS
 
 else{
 
