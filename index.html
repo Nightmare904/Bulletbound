@@ -82,8 +82,6 @@ speed:110,
 magnet:70,
 bulletSpeed:480,
 
-// Base fire rate.
-// Lower number = faster.
 fireRate:.28,
 
 shots:1,
@@ -94,11 +92,11 @@ aimSensitivity:.5,
 
 weapon:null,
 
-// Shotgun upgrades
-shotgunPlus2:0,
+// Scatter Blaster upgrades
+scatterPlus2:0,
 
-// Rifle upgrades
-rifleDamageUpgrades:0
+// Fast Pew Pew upgrades
+fastDamageUpgrades:0
 };
 
 
@@ -168,23 +166,23 @@ knobR:24
 
 
 // =========================
-// NORMAL UPGRADES
+// UPGRADES
 // =========================
 
-const rifleUpgrades=[
+const fastPewPewUpgrades=[
 
 {
-name:"Rifle Damage",
+name:"Pew Pew Power",
 desc:"Increase damage by 50%",
 apply:()=>{
 player.damage*=1.5;
-player.rifleDamageUpgrades++;
+player.fastDamageUpgrades++;
 }
 },
 
 {
-name:"Double Shot",
-desc:"Fire 2 bullets at a time",
+name:"Double Pew",
+desc:"Fire 2 projectiles at a time",
 apply:()=>{
 player.shots*=2;
 }
@@ -193,20 +191,20 @@ player.shots*=2;
 ];
 
 
-const shotgunUpgrades=[
+const scatterBlasterUpgrades=[
 
 {
-name:"+2 Pellets",
-desc:"Fire 2 additional pellets",
+name:"+2 Scatter",
+desc:"Fire 2 additional projectiles",
 apply:()=>{
 player.shots+=2;
-player.shotgunPlus2++;
+player.scatterPlus2++;
 }
 },
 
 {
-name:"Double Damage",
-desc:"Bullets deal 2× damage",
+name:"Double Power",
+desc:"Projectiles deal 2× damage",
 apply:()=>{
 player.damage*=2;
 }
@@ -286,8 +284,8 @@ player.aimSensitivity=.5;
 
 player.weapon=null;
 
-player.shotgunPlus2=0;
-player.rifleDamageUpgrades=0;
+player.scatterPlus2=0;
+player.fastDamageUpgrades=0;
 
 enemies=[];
 shots=[];
@@ -867,11 +865,9 @@ aimJoy.on
 const a=player.aim;
 
 
-// Shotgun uses a tight cone.
-// Rifle/basic weapon uses normal
-// centered shots.
+// Scatter Blaster
 
-if(player.weapon==="shotgun"){
+if(player.weapon==="scatter"){
 
 const spread=.055;
 
@@ -1019,7 +1015,7 @@ Math.sin(a)*25;
 
 
 // -------------------------
-// PLAYER BULLETS
+// PLAYER PROJECTILES
 // -------------------------
 
 for(const s of shots){
@@ -1030,7 +1026,7 @@ s.y+=s.vy*dt;
 s.life-=dt;
 
 
-// Barrier stops player bullets.
+// Barrier stops player projectiles.
 
 if(
 s.x<arena.left||
@@ -1047,7 +1043,7 @@ s.life=0;
 
 
 // -------------------------
-// ENEMY BULLETS
+// ENEMY PROJECTILES
 // -------------------------
 
 for(const s of enemyShots){
@@ -1076,7 +1072,7 @@ s.life=0;
 
 
 // -------------------------
-// BULLET COLLISIONS
+// PROJECTILE COLLISIONS
 // -------------------------
 
 for(const s of shots){
@@ -1202,7 +1198,8 @@ xpNext*1.25
 );
 
 
-// Level 2 is the weapon choice.
+// Level 2 is ALWAYS the
+// special weapon choice.
 
 if(level===2){
 
@@ -1248,6 +1245,10 @@ gameOver=true;
 
 function openWeaponChoice(){
 
+upgradeChoices=[];
+
+upgradeOpen=false;
+
 weaponChoiceOpen=true;
 
 paused=false;
@@ -1266,33 +1267,35 @@ if(!weaponChoiceOpen)return;
 
 if(i===0){
 
-// SHOTGUN
+// SCATTER BLASTER
 
-player.weapon="shotgun";
+player.weapon="scatter";
 
 player.shots=1;
 
-// Twice as slow.
+// Slower firing.
 
 player.fireRate=.28*2;
+
+player.damage=20;
 
 }
 
 else{
 
-// RIFLE
+// FAST PEW PEW
 
-player.weapon="rifle";
+player.weapon="fast";
 
 player.shots=1;
 
-// Twice as fast.
+// Faster firing.
 
 player.fireRate=.28/2;
 
-// Half normal damage.
+// Lower starting damage.
 
-player.damage=20*.5;
+player.damage=10;
 
 }
 
@@ -1310,28 +1313,32 @@ shoot=0;
 
 function openUpgrades(){
 
+if(!player.weapon){
+
+openWeaponChoice();
+return;
+
+}
+
 upgradeOpen=true;
 
 paused=false;
 
 upgradeChoices=[];
 
-
-// Choose pool based on weapon.
-
 let pool;
 
-if(player.weapon==="shotgun"){
+if(player.weapon==="scatter"){
 
-pool=[...shotgunUpgrades];
+pool=[...scatterBlasterUpgrades];
 
 
-// +2 can only appear twice.
+// +2 Scatter can only appear twice.
 
-if(player.shotgunPlus2>=2){
+if(player.scatterPlus2>=2){
 
 pool=pool.filter(
-u=>u.name!=="+2 Pellets"
+u=>u.name!=="+2 Scatter"
 );
 
 }
@@ -1340,7 +1347,7 @@ u=>u.name!=="+2 Pellets"
 
 else{
 
-pool=[...rifleUpgrades];
+pool=[...fastPewPewUpgrades];
 
 }
 
@@ -1703,7 +1710,7 @@ ctx.fill();
 }
 
 
-// Enemy bullets
+// Enemy projectiles
 
 for(const s of enemyShots){
 
@@ -1724,7 +1731,7 @@ ctx.fill();
 }
 
 
-// Player bullets
+// Player projectiles
 
 for(const s of shots){
 
@@ -2026,7 +2033,7 @@ ctx.textAlign="center";
 ctx.font="bold 27px system-ui";
 
 ctx.fillText(
-"CHOOSE YOUR WEAPON",
+"CHOOSE YOUR STYLE",
 W/2,
 H/2-120
 );
@@ -2052,13 +2059,13 @@ H/2-75;
 const weaponCards=[
 
 {
-name:"SHOTGUN",
+name:"SCATTER BLASTER",
 desc:"Slow fire • Tight spread"
 },
 
 {
-name:"RIFLE",
-desc:"Fast fire • Half damage"
+name:"FAST PEW PEW",
+desc:"Fast fire • Lower power"
 }
 
 ];
@@ -2100,7 +2107,7 @@ cardW,
 
 ctx.fillStyle="#fff";
 
-ctx.font="bold 20px system-ui";
+ctx.font="bold 18px system-ui";
 
 ctx.fillText(
 card.name,
