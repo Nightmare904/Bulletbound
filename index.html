@@ -523,7 +523,6 @@ xpNext=100;
 paused=false;
 
 upgradeChoices=[];
-
 upgradeOpen=false;
 
 weaponChoiceOpen=false;
@@ -819,6 +818,51 @@ x<=xx+cardW&&
 y>=cardY&&
 y<=cardY+150
 );
+
+}
+
+
+// =========================
+// FIRE BASE ATTACK
+// =========================
+
+function fireBase(){
+
+if(
+player.weapon!==null
+)
+return;
+
+if(shoot>0)
+return;
+
+
+const a=player.aim;
+
+
+shots.push({
+
+x:player.x,
+y:player.y,
+
+vx:
+Math.cos(a)*
+player.bulletSpeed,
+
+vy:
+Math.sin(a)*
+player.bulletSpeed,
+
+r:5,
+
+life:1.5,
+
+damage:player.damage
+
+});
+
+
+shoot=player.fireRate;
 
 }
 
@@ -1171,7 +1215,19 @@ e.clientY
 );
 
 
-// FIRE IMMEDIATELY
+// FIRE BASE ATTACK IMMEDIATELY
+
+if(
+player.weapon===null&&
+shoot<=0
+){
+
+fireBase();
+
+}
+
+
+// FIRE FAST IMMEDIATELY
 
 if(
 player.weapon==="fast"&&
@@ -1182,6 +1238,9 @@ shoot<=0
 fireFast();
 
 }
+
+
+// FIRE SCATTER IMMEDIATELY
 
 if(
 player.weapon==="scatter"&&
@@ -1560,6 +1619,21 @@ player.reloading=false;
 // =========================
 
 shoot-=dt;
+
+
+// =========================
+// BASE ATTACK
+// =========================
+
+if(
+player.weapon===null&&
+aimJoy.on&&
+shoot<=0
+){
+
+fireBase();
+
+}
 
 
 // =========================
