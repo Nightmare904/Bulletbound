@@ -170,13 +170,6 @@ let started=false;
 
 
 // =========================
-// INPUT
-// =========================
-
-let scatterShootRequest=false;
-
-
-// =========================
 // JOYSTICKS
 // =========================
 
@@ -537,8 +530,6 @@ weaponChoiceOpen=false;
 
 gameOver=false;
 
-scatterShootRequest=false;
-
 
 // Inputs
 
@@ -802,18 +793,6 @@ y<=44
 }
 
 
-function pointInShoot(x,y){
-
-return(
-x>=W-110&&
-x<=W-16&&
-y>=52&&
-y<=96
-);
-
-}
-
-
 function pointInCard(x,y,i){
 
 const gap=16;
@@ -854,7 +833,8 @@ function fireFast(){
 
 if(
 player.weapon!=="fast"
-)return;
+)
+return;
 
 if(player.reloading)
 return;
@@ -1154,31 +1134,6 @@ e.clientY
 ){
 
 paused=!paused;
-
-return;
-
-}
-
-
-// SCATTER SHOOT BUTTON
-
-if(
-player.weapon==="scatter"&&
-pointInShoot(
-e.clientX,
-e.clientY
-)
-){
-
-if(
-!paused&&
-!player.scatterReloading&&
-shoot<=0
-){
-
-fireScatter();
-
-}
 
 return;
 
@@ -1626,17 +1581,15 @@ fireFast();
 
 
 // =========================
-// SCATTER REQUEST
+// SCATTER BLASTER
 // =========================
 
 if(
 player.weapon==="scatter"&&
-scatterShootRequest&&
+aimJoy.on&&
 shoot<=0&&
 !player.scatterReloading
 ){
-
-scatterShootRequest=false;
 
 fireScatter();
 
@@ -2038,8 +1991,6 @@ upgradeChoices=[];
 
 shoot=0;
 
-scatterShootRequest=false;
-
 }
 
 
@@ -2160,8 +2111,6 @@ weaponChoiceOpen=false;
 paused=false;
 
 shoot=0;
-
-scatterShootRequest=false;
 
 }
 
@@ -3017,51 +2966,6 @@ W-63,
 
 
 // =========================
-// SHOOT BUTTON
-// =========================
-
-if(
-player.weapon==="scatter"
-){
-
-ctx.fillStyle="#202838";
-
-ctx.fillRect(
-W-110,
-52,
-94,
-44
-);
-
-
-ctx.strokeStyle="#ffcf5c";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-W-110,
-52,
-94,
-44
-);
-
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 12px system-ui";
-
-ctx.fillText(
-player.scatterReloading
-?"RELOADING"
-:"SHOOT",
-W-63,
-79
-);
-
-}
-
-
-// =========================
 // AIM JOYSTICK
 // =========================
 
@@ -3233,7 +3137,7 @@ const weaponCards=[
 
 {
 name:"SCATTER BLASTER",
-desc:"Slow fire • Manual spread"
+desc:"Slow fire • Automatic spread"
 },
 
 {
