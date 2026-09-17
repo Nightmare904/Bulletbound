@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html>
 <head>
@@ -28,7 +29,8 @@ height:100%
 
 <script>
 
-const c=document.getElementById("c"),ctx=c.getContext("2d");
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
 
 let W,H,dpr;
 
@@ -36,9 +38,11 @@ function resize(){
 dpr=Math.min(devicePixelRatio||1,2);
 W=innerWidth;
 H=innerHeight;
+
 c.width=W*dpr;
 c.height=H*dpr;
-ctx.setTransform(dpr,0,0,dpr,0,0)
+
+ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 
 addEventListener("resize",resize);
@@ -53,41 +57,48 @@ const player={
 x:0,
 y:0,
 r:15,
+
 hp:100,
 maxHp:100,
 
 shots:1,
 damage:20,
+
 speed:110,
+
 magnet:70,
+
 bulletSpeed:480,
+
 fireRate:.28,
 
 aim:0,
 aimTarget:0,
+
 aimSensitivity:.5
 };
 
 
 /* =========================
-   GAME VARIABLES
+   GAME STATE
 ========================= */
 
-let enemies=[],
-shots=[],
-enemyShots=[],
-orbs=[];
+let enemies=[];
+let shots=[];
+let enemyShots=[];
+let orbs=[];
 
 let score=0;
 
 let wave=1;
 
 /*
-These variables are completely separate
-from the enemies array.
+waveTotal:
+How many enemies this wave contains.
 
-waveTotal = total enemies this wave
-waveSpawned = how many have actually spawned
+waveSpawned:
+How many enemies from this wave
+have actually been created.
 */
 
 let waveTotal=0;
@@ -97,16 +108,17 @@ let waveSpawnTimer=0;
 let waveBreakTimer=0;
 
 let shoot=0;
+
 let last=0;
 
-let xp=0,
-level=1,
-xpNext=100;
+let xp=0;
+let level=1;
+let xpNext=100;
 
-let paused=false,
-upgradeChoices=[],
-upgradeOpen=false,
-gameOver=false;
+let paused=false;
+let upgradeChoices=[];
+let upgradeOpen=false;
+let gameOver=false;
 
 
 /* =========================
@@ -116,12 +128,16 @@ gameOver=false;
 let joy={
 on:false,
 pointerId:null,
+
 x:82,
 y:0,
+
 tx:82,
 ty:0,
+
 dx:0,
 dy:0,
+
 r:58,
 knobR:24
 };
@@ -129,12 +145,16 @@ knobR:24
 let aimJoy={
 on:false,
 pointerId:null,
+
 x:0,
 y:0,
+
 tx:0,
 ty:0,
+
 dx:1,
 dy:0,
+
 r:58,
 knobR:24
 };
@@ -149,25 +169,33 @@ const upgrades=[
 {
 name:"Double Shot",
 desc:"Fire 2 bullets at a time",
-apply:()=>player.shots*=2
+apply:()=>{
+player.shots*=2;
+}
 },
 
 {
 name:"Rapid Fire",
 desc:"Fire twice as fast",
-apply:()=>player.fireRate*=.5
+apply:()=>{
+player.fireRate*=.5;
+}
 },
 
 {
 name:"Triple Velocity",
 desc:"Bullets move 3× faster",
-apply:()=>player.bulletSpeed*=3
+apply:()=>{
+player.bulletSpeed*=3;
+}
 },
 
 {
 name:"Double Damage",
 desc:"Bullets deal 2× damage",
-apply:()=>player.damage*=2
+apply:()=>{
+player.damage*=2;
+}
 }
 
 ];
@@ -180,11 +208,8 @@ apply:()=>player.damage*=2
 function getWaveEnemyCount(w){
 
 /*
-Wave 1 = 5
-Wave 2 = 7
-Wave 3 = 9
-Wave 4 = 11
-etc.
+5 enemies on Wave 1.
+Every wave adds 2.
 */
 
 return 5+(w-1)*2;
@@ -195,8 +220,9 @@ return 5+(w-1)*2;
 function getWaveSpawnSpeed(w){
 
 /*
-Spawning gradually gets faster,
-but never becomes absurdly fast.
+Enemies spawn faster every wave,
+but never faster than once every
+0.35 seconds.
 */
 
 return Math.max(
@@ -226,7 +252,7 @@ Math.random()*20
 
 
 /* =========================
-   START WAVE
+   START A NEW WAVE
 ========================= */
 
 function startWave(){
@@ -242,7 +268,49 @@ waveSpawnTimer=.5;
 
 
 /* =========================
-   RESET
+   COMPLETE WAVE
+========================= */
+
+function completeWave(){
+
+/*
+FULL HEALTH RESTORE
+
+This happens directly when
+the wave has been completed.
+*/
+
+player.hp=player.maxHp;
+
+
+/*
+Move to the next wave.
+*/
+
+wave++;
+
+
+/*
+Reset the counters BEFORE
+the next wave starts.
+*/
+
+waveTotal=0;
+waveSpawned=0;
+waveSpawnTimer=0;
+
+
+/*
+Short break between waves.
+*/
+
+waveBreakTimer=1;
+
+}
+
+
+/* =========================
+   RESET GAME
 ========================= */
 
 function reset(){
@@ -256,7 +324,9 @@ player.maxHp=100;
 player.shots=1;
 player.damage=20;
 player.speed=110;
+
 player.magnet=70;
+
 player.bulletSpeed=480;
 player.fireRate=.28;
 
@@ -273,8 +343,10 @@ orbs=[];
 score=0;
 
 wave=1;
+
 waveTotal=0;
 waveSpawned=0;
+
 waveSpawnTimer=0;
 waveBreakTimer=0;
 
@@ -284,11 +356,17 @@ xp=0;
 level=1;
 xpNext=100;
 
+paused=false;
+
 upgradeChoices=[];
 upgradeOpen=false;
 
-paused=false;
 gameOver=false;
+
+
+/*
+Reset movement controls.
+*/
 
 joy.on=false;
 joy.pointerId=null;
@@ -299,6 +377,11 @@ aimJoy.on=false;
 aimJoy.pointerId=null;
 aimJoy.dx=1;
 aimJoy.dy=0;
+
+
+/*
+Start Wave 1.
+*/
 
 startWave();
 
@@ -359,6 +442,7 @@ joy.y=H-82;
 
 }
 
+
 function aimJoystickPos(){
 
 aimJoy.x=W-65;
@@ -368,15 +452,15 @@ aimJoy.y=H-65;
 
 
 /* =========================
-   MOVEMENT JOYSTICK
+   MOVE JOYSTICK
 ========================= */
 
 function setJoystick(px,py){
 
 joystickPos();
 
-let dx=px-joy.x,
-dy=py-joy.y;
+let dx=px-joy.x;
+let dy=py-joy.y;
 
 let l=Math.hypot(dx,dy)||1;
 
@@ -406,8 +490,8 @@ function setAimJoystick(px,py){
 
 aimJoystickPos();
 
-let dx=px-aimJoy.x,
-dy=py-aimJoy.y;
+let dx=px-aimJoy.x;
+let dy=py-aimJoy.y;
 
 let l=Math.hypot(dx,dy)||1;
 
@@ -440,15 +524,17 @@ aimJoy.dx
 
 
 /* =========================
-   UI
+   UI HITBOXES
 ========================= */
 
 function pointInPause(x,y){
 
-return x>=W-110&&
+return (
+x>=W-110&&
 x<=W-16&&
 y>=12&&
-y<=44;
+y<=44
+);
 
 }
 
@@ -475,10 +561,12 @@ H/2-75;
 const xx=
 startX+i*(cardW+gap);
 
-return x>=xx&&
+return (
+x>=xx&&
 x<=xx+cardW&&
 y>=cardY&&
-y<=cardY+150;
+y<=cardY+150
+);
 
 }
 
@@ -688,7 +776,7 @@ releasePointer
 
 
 /* =========================
-   KEYBOARD
+   KEYBOARD PAUSE
 ========================= */
 
 addEventListener(
@@ -717,15 +805,19 @@ if(
 gameOver||
 paused||
 upgradeOpen
-)return;
+){
+
+return;
+
+}
 
 
 /* =========================
    PLAYER MOVEMENT
 ========================= */
 
-let dx=joy.dx,
-dy=joy.dy;
+let dx=joy.dx;
+let dy=joy.dy;
 
 if(
 Math.hypot(dx,dy)>.05
@@ -770,15 +862,21 @@ player.aimTarget-
 player.aim;
 
 
-while(diff>Math.PI)
+while(diff>Math.PI){
+
 diff-=Math.PI*2;
 
-while(diff<-Math.PI)
+}
+
+while(diff<-Math.PI){
+
 diff+=Math.PI*2;
+
+}
 
 
 /*
-50% sensitivity.
+Half sensitivity.
 */
 
 player.aim+=
@@ -810,7 +908,7 @@ startWave();
 
 
 /* =========================
-   SPAWN CURRENT WAVE
+   WAVE ENEMY SPAWNING
 ========================= */
 
 if(
@@ -823,15 +921,20 @@ waveSpawnTimer-=dt;
 if(waveSpawnTimer<=0){
 
 /*
-IMPORTANT:
-The counter is incremented
-at the exact moment an enemy
-is created.
+Spawn exactly ONE enemy.
 */
 
 spawnEnemy();
 
+/*
+Immediately count it.
+*/
+
 waveSpawned++;
+
+/*
+Set timer for the next enemy.
+*/
 
 waveSpawnTimer=
 getWaveSpawnSpeed(wave);
@@ -846,13 +949,15 @@ getWaveSpawnSpeed(wave);
 ========================= */
 
 /*
-A wave is complete only when:
+IMPORTANT:
 
-1. Every planned enemy spawned.
-2. Every spawned enemy is dead.
+The wave cannot finish until:
 
-Then the player is healed and
-the next wave is prepared.
+1. waveSpawned === waveTotal
+2. enemies.length === 0
+
+That means every planned enemy
+has spawned AND every enemy is dead.
 */
 
 if(
@@ -861,17 +966,7 @@ waveSpawned===waveTotal&&
 enemies.length===0
 ){
 
-/* FULL HEAL */
-
-player.hp=
-player.maxHp;
-
-
-/* NEXT WAVE */
-
-wave++;
-
-waveBreakTimer=1;
+completeWave();
 
 }
 
@@ -952,7 +1047,6 @@ Math.sin(a)*
 e.speed*
 dt;
 
-
 e.shoot-=dt;
 
 
@@ -979,7 +1073,7 @@ e.shoot=2.5;
 }
 
 
-/* COLLISION */
+/* ENEMY CONTACT */
 
 if(
 Math.hypot(
@@ -1205,7 +1299,7 @@ gameOver=true;
 
 
 /* =========================
-   UPGRADE SCREEN
+   OPEN UPGRADES
 ========================= */
 
 function openUpgrades(){
@@ -1237,7 +1331,7 @@ pool.splice(i,1)[0]
 
 
 /* =========================
-   SELECT UPGRADE
+   CHOOSE UPGRADE
 ========================= */
 
 function chooseUpgrade(i){
@@ -1245,11 +1339,15 @@ function chooseUpgrade(i){
 if(
 !upgradeOpen||
 !upgradeChoices[i]
-)return;
+){
+
+return;
+
+}
 
 
 /*
-Apply upgrade.
+Apply selected upgrade.
 */
 
 upgradeChoices[i].apply();
@@ -1258,9 +1356,9 @@ upgradeChoices[i].apply();
 /*
 CLEAR ALL PROJECTILES.
 
-This removes both:
-- player bullets
-- enemy bullets
+This removes:
+- all player bullets
+- all enemy bullets
 */
 
 shots=[];
@@ -1277,12 +1375,6 @@ upgradeOpen=false;
 
 paused=false;
 
-
-/*
-Allow shooting immediately
-after the upgrade.
-*/
-
 shoot=0;
 
 }
@@ -1297,7 +1389,11 @@ function togglePause(){
 if(
 gameOver||
 upgradeOpen
-)return;
+){
+
+return;
+
+}
 
 paused=!paused;
 
@@ -1323,6 +1419,7 @@ H
 /* GRID */
 
 ctx.strokeStyle="#141a26";
+
 ctx.lineWidth=1;
 
 for(
@@ -1379,7 +1476,7 @@ W-100,
 );
 
 
-/* XP */
+/* XP BAR */
 
 ctx.fillStyle="#65e6ff";
 
@@ -1431,7 +1528,7 @@ xpNext+
 );
 
 
-/* HP */
+/* HP BAR */
 
 ctx.fillStyle="#32141a";
 
@@ -1460,17 +1557,33 @@ player.hp/player.maxHp
    WAVE STATUS
 ========================= */
 
+ctx.textAlign="center";
+
 if(
-waveSpawned<waveTotal&&
-waveBreakTimer<=0
+waveBreakTimer>0
+){
+
+ctx.fillStyle="#65e6ff";
+
+ctx.font=
+"bold 11px system-ui";
+
+ctx.fillText(
+"WAVE "+wave+" READY",
+W/2,
+24
+);
+
+}
+
+else if(
+waveSpawned<waveTotal
 ){
 
 ctx.fillStyle="#fff";
 
 ctx.font=
 "bold 10px system-ui";
-
-ctx.textAlign="center";
 
 ctx.fillText(
 "ENEMIES "+
@@ -1480,8 +1593,6 @@ waveTotal,
 W/2,
 24
 );
-
-ctx.textAlign="left";
 
 }
 
@@ -1495,38 +1606,15 @@ ctx.fillStyle="#fff";
 ctx.font=
 "bold 10px system-ui";
 
-ctx.textAlign="center";
-
 ctx.fillText(
 "ELIMINATE REMAINING",
 W/2,
 24
 );
 
-ctx.textAlign="left";
-
 }
 
-else if(
-waveBreakTimer>0
-){
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font=
-"bold 11px system-ui";
-
-ctx.textAlign="center";
-
-ctx.fillText(
-"NEXT WAVE",
-W/2,
-24
-);
-
 ctx.textAlign="left";
-
-}
 
 
 /* =========================
@@ -1645,7 +1733,7 @@ e.y+5,
 );
 
 
-/* HP BAR */
+/* HEALTH BAR */
 
 ctx.fillStyle="#222";
 
@@ -1794,6 +1882,7 @@ Math.PI*2
 
 ctx.fill();
 
+
 ctx.strokeStyle="#6fe7ff";
 
 ctx.lineWidth=2;
@@ -1853,6 +1942,7 @@ Math.PI*2
 );
 
 ctx.fill();
+
 
 ctx.strokeStyle="#6fe7ff";
 
@@ -2016,7 +2106,7 @@ ctx.textAlign="left";
 
 
 /* =========================
-   PAUSED SCREEN
+   PAUSED
 ========================= */
 
 if(
@@ -2133,7 +2223,7 @@ requestAnimationFrame(loop);
 
 
 /* =========================
-   START GAME
+   START
 ========================= */
 
 reset();
