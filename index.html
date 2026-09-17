@@ -736,8 +736,6 @@ aimJoy.tx=aimJoy.x+dx;
 aimJoy.ty=aimJoy.y+dy;
 
 
-// Always update aim when joystick moves.
-
 if(
 Math.abs(aimJoy.dx)>.01||
 Math.abs(aimJoy.dy)>.01
@@ -1163,22 +1161,38 @@ aimDistance<=
 aimJoy.r+25
 ){
 
-if(!aimJoy.on){
-
 aimJoy.on=true;
 
 aimJoy.pointerId=e.pointerId;
-
-try{
-c.setPointerCapture(e.pointerId);
-}catch(err){}
-
-}
 
 setAimJoystick(
 e.clientX,
 e.clientY
 );
+
+
+// FIRE IMMEDIATELY
+
+if(
+player.weapon==="fast"&&
+!player.reloading&&
+shoot<=0
+){
+
+fireFast();
+
+}
+
+if(
+player.weapon==="scatter"&&
+!player.scatterReloading&&
+shoot<=0
+){
+
+fireScatter();
+
+}
+
 
 return;
 
@@ -1198,17 +1212,9 @@ moveDistance<=
 joy.r+25
 ){
 
-if(!joy.on){
-
 joy.on=true;
 
 joy.pointerId=e.pointerId;
-
-try{
-c.setPointerCapture(e.pointerId);
-}catch(err){}
-
-}
 
 setJoystick(
 e.clientX,
@@ -1284,10 +1290,6 @@ aimJoystickPos();
 aimJoy.tx=aimJoy.x;
 aimJoy.ty=aimJoy.y;
 
-try{
-c.releasePointerCapture(e.pointerId);
-}catch(err){}
-
 }
 
 
@@ -1307,10 +1309,6 @@ joystickPos();
 
 joy.tx=joy.x;
 joy.ty=joy.y;
-
-try{
-c.releasePointerCapture(e.pointerId);
-}catch(err){}
 
 }
 
