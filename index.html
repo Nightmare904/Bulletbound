@@ -1,8 +1,7 @@
-```html
 <!doctype html>
 <html>
 <head>
-<meta name="viewport" content="widt=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Bulletbound</title>
 
 <style>
@@ -81,7 +80,7 @@ const player={
 
 x:0,
 y:0,
-r:15,
+r:11,
 
 hp:100,
 maxHp:100,
@@ -3106,6 +3105,18 @@ const hpW=Math.min(220,W*.38);
 const hpX=28;
 const hpY=58;
 
+ctx.fillStyle="#9aa6b8";
+
+ctx.textAlign="left";
+
+ctx.font="bold 10px system-ui";
+
+ctx.fillText(
+"HP "+Math.ceil(Math.max(0,player.hp))+" / "+player.maxHp,
+hpX,
+hpY-4
+);
+
 ctx.fillStyle="#222936";
 
 ctx.fillRect(
@@ -3134,6 +3145,18 @@ player.hp/player.maxHp
 const xpW=Math.min(220,W*.38);
 
 const xpX=W-xpW-28;
+
+ctx.fillStyle="#9aa6b8";
+
+ctx.textAlign="right";
+
+ctx.font="bold 10px system-ui";
+
+ctx.fillText(
+"XP "+Math.floor(xp)+" / "+xpNext,
+xpX+xpW,
+hpY-4
+);
 
 ctx.fillStyle="#222936";
 
@@ -3168,16 +3191,6 @@ ctx.fillText(
 "LV "+level,
 W-28,
 28
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="11px system-ui";
-
-ctx.fillText(
-"XP "+Math.floor(xp)+" / "+xpNext,
-W-28,
-48
 );
 
 
@@ -3341,6 +3354,35 @@ e.y-e.r,
 e.r*2,
 e.r*2
 );
+
+
+// LITTLE EYES
+
+ctx.fillStyle="#111";
+
+ctx.beginPath();
+
+ctx.arc(
+e.x-5,
+e.y-3,
+2.5,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.beginPath();
+
+ctx.arc(
+e.x+5,
+e.y-3,
+2.5,
+0,
+Math.PI*2
+);
+
+ctx.fill();
 
 }
 
@@ -4029,4 +4071,3 @@ requestAnimationFrame(loop);
 
 </body>
 </html>
-```
