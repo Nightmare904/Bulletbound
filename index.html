@@ -176,7 +176,6 @@ let started=false;
 let joy={
 
 on:false,
-pointerId:null,
 
 x:82,
 y:0,
@@ -196,7 +195,6 @@ knobR:24
 let aimJoy={
 
 on:false,
-pointerId:null,
 
 x:0,
 y:0,
@@ -211,6 +209,14 @@ r:58,
 knobR:24
 
 };
+
+
+// =========================
+// TOUCH INPUT
+// =========================
+
+let moveTouchId=null;
+let aimTouchId=null;
 
 
 // =========================
@@ -524,21 +530,21 @@ paused=false;
 
 upgradeChoices=[];
 upgradeOpen=false;
-
 weaponChoiceOpen=false;
 
 gameOver=false;
 
 
-// Inputs
+// Touch
+
+moveTouchId=null;
+aimTouchId=null;
 
 joy.on=false;
-joy.pointerId=null;
 joy.dx=0;
 joy.dy=0;
 
 aimJoy.on=false;
-aimJoy.pointerId=null;
 aimJoy.dx=1;
 aimJoy.dy=0;
 
@@ -828,9 +834,7 @@ y<=cardY+150
 
 function fireBase(){
 
-if(
-player.weapon!==null
-)
+if(player.weapon!==null)
 return;
 
 if(shoot>0)
@@ -873,9 +877,7 @@ shoot=player.fireRate;
 
 function fireFast(){
 
-if(
-player.weapon!=="fast"
-)
+if(player.weapon!=="fast")
 return;
 
 if(player.reloading)
@@ -967,9 +969,7 @@ player.reloadTime;
 
 function fireScatter(){
 
-if(
-player.weapon!=="scatter"
-)
+if(player.weapon!=="scatter")
 return;
 
 if(player.scatterReloading)
@@ -1061,17 +1061,401 @@ player.scatterReloadTime;
 
 
 // =========================
-// POINTER DOWN
+// HANDLE AIM TOUCH
+// =========================
+
+function beginAimTouch(touch){
+
+aimJoystickPos();
+
+const x=touch.clientX;
+const y=touch.clientY;
+
+const distance=
+Math.hypot(
+x-aimJoy.x,
+y-aimJoy.y
+);
+
+if(
+distance>
+aimJoy.r+30
+)
+return false;
+
+aimTouchId=touch.identifier;
+
+aimJoy.on=true;
+
+setAimJoystick(x,y);
+
+
+// FIRE IMMEDIATELY
+
+if(player.weapon===null){
+
+fireBase();
+
+}
+else if(
+player.weapon==="fast"&&
+!player.reloading
+){
+
+fireFast();
+
+}
+else if(
+player.weapon==="scatter"&&
+!player.scatterReloading
+){
+
+fireScatter();
+
+}
+
+return true;
+
+}
+
+
+// =========================
+// HANDLE MOVE TOUCH
+// =========================
+
+function beginMoveTouch(touch){
+
+joystickPos();
+
+const x=touch.clientX;
+const y=touch.clientY;
+
+const distance=
+Math.hypot(
+x-joy.x,
+y-joy.y
+);
+
+if(
+distance>
+joy.r+30
+)
+return false;
+
+moveTouchId=touch.identifier;
+
+joy.on=true;
+
+setJoystick(x,y);
+
+return true;
+
+}
+
+
+// =========================
+// TOUCH START
+// =========================
+
+c.addEventListener(
+"touchstart",
+e=>{
+
+e.preventDefault();
+
+
+// Menu
+
+if(!started){
+
+for(const touch of e.changedTouches){
+
+if(
+pointInPlay(
+touch.clientX,
+touch.clientY
+)
+){
+
+startGame();
+
+return;
+
+}
+
+}
+
+return;
+
+}
+
+
+// Game over
+
+if(gameOver){
+
+reset();
+
+startGame();
+
+return;
+
+}
+
+
+// Weapon choice
+
+if(weaponChoiceOpen){
+
+for(const touch of e.changedTouches){
+
+for(let i=0;i<2;i++){
+
+if(
+pointInCard(
+touch.clientX,
+touch.clientY,
+i
+)
+){
+
+chooseWeapon(i);
+
+return;
+
+}
+
+}
+
+}
+
+return;
+
+}
+
+
+// Upgrades
+
+if(upgradeOpen){
+
+for(const touch of e.changedTouches){
+
+for(let i=0;i<2;i++){
+
+if(
+pointInCard(
+touch.clientX,
+touch.clientY,
+i
+)
+){
+
+chooseUpgrade(i);
+
+return;
+
+}
+
+}
+
+}
+
+return;
+
+}
+
+
+// Pause
+
+for(const touch of e.changedTouches){
+
+if(
+pointInPause(
+touch.clientX,
+touch.clientY
+)
+){
+
+paused=!paused;
+
+return;
+
+}
+
+}
+
+
+if(paused)
+return;
+
+
+// Find joystick touch
+
+for(const touch of e.changedTouches){
+
+if(
+aimTouchId===null&&
+beginAimTouch(touch)
+){
+
+return;
+
+}
+
+if(
+moveTouchId===null&&
+beginMoveTouch(touch)
+){
+
+return;
+
+}
+
+}
+
+},
+{passive:false}
+);
+
+
+// =========================
+// TOUCH MOVE
+// =========================
+
+c.addEventListener(
+"touchmove",
+e=>{
+
+e.preventDefault();
+
+for(const touch of e.changedTouches){
+
+if(
+aimTouchId===
+touch.identifier
+){
+
+setAimJoystick(
+touch.clientX,
+touch.clientY
+);
+
+}
+
+
+if(
+moveTouchId===
+touch.identifier
+){
+
+setJoystick(
+touch.clientX,
+touch.clientY
+);
+
+}
+
+}
+
+},
+{passive:false}
+);
+
+
+// =========================
+// TOUCH END
+// =========================
+
+function endTouch(touch){
+
+if(
+aimTouchId===
+touch.identifier
+){
+
+aimTouchId=null;
+
+aimJoy.on=false;
+
+aimJoy.dx=1;
+aimJoy.dy=0;
+
+aimJoystickPos();
+
+aimJoy.tx=aimJoy.x;
+aimJoy.ty=aimJoy.y;
+
+}
+
+
+if(
+moveTouchId===
+touch.identifier
+){
+
+moveTouchId=null;
+
+joy.on=false;
+
+joy.dx=0;
+joy.dy=0;
+
+joystickPos();
+
+joy.tx=joy.x;
+joy.ty=joy.y;
+
+}
+
+}
+
+
+c.addEventListener(
+"touchend",
+e=>{
+
+e.preventDefault();
+
+for(const touch of e.changedTouches){
+
+endTouch(touch);
+
+}
+
+},
+{passive:false}
+);
+
+
+c.addEventListener(
+"touchcancel",
+e=>{
+
+e.preventDefault();
+
+for(const touch of e.changedTouches){
+
+endTouch(touch);
+
+}
+
+},
+{passive:false}
+);
+
+
+// =========================
+// MOUSE / POINTER SUPPORT
 // =========================
 
 c.addEventListener(
 "pointerdown",
 e=>{
 
+if(e.pointerType==="touch")
+return;
+
 e.preventDefault();
-
-
-// MENU
 
 if(!started){
 
@@ -1090,29 +1474,17 @@ return;
 
 }
 
-
-// GAME OVER
-
 if(gameOver){
 
 reset();
-
 startGame();
-
 return;
 
 }
 
-
-// WEAPON CHOICE
-
 if(weaponChoiceOpen){
 
-for(
-let i=0;
-i<2;
-i++
-){
+for(let i=0;i<2;i++){
 
 if(
 pointInCard(
@@ -1123,7 +1495,6 @@ i
 ){
 
 chooseWeapon(i);
-
 return;
 
 }
@@ -1133,17 +1504,10 @@ return;
 return;
 
 }
-
-
-// UPGRADES
 
 if(upgradeOpen){
 
-for(
-let i=0;
-i<2;
-i++
-){
+for(let i=0;i<2;i++){
 
 if(
 pointInCard(
@@ -1154,7 +1518,6 @@ i
 ){
 
 chooseUpgrade(i);
-
 return;
 
 }
@@ -1164,9 +1527,6 @@ return;
 return;
 
 }
-
-
-// PAUSE
 
 if(
 pointInPause(
@@ -1176,111 +1536,61 @@ e.clientY
 ){
 
 paused=!paused;
-
 return;
 
 }
-
 
 if(paused)
 return;
 
 
-// Update joystick locations
-
-joystickPos();
-aimJoystickPos();
-
-
-// AIM JOYSTICK
-
-const aimDistance=
+if(
 Math.hypot(
 e.clientX-aimJoy.x,
 e.clientY-aimJoy.y
-);
-
-if(
-aimDistance<=
-aimJoy.r+25
+)<=aimJoy.r+30
 ){
 
 aimJoy.on=true;
-
-aimJoy.pointerId=e.pointerId;
 
 setAimJoystick(
 e.clientX,
 e.clientY
 );
 
-
-// FIRE BASE ATTACK IMMEDIATELY
-
-if(
-player.weapon===null&&
-shoot<=0
-){
-
+if(player.weapon===null)
 fireBase();
 
-}
-
-
-// FIRE FAST IMMEDIATELY
-
-if(
+else if(
 player.weapon==="fast"&&
-!player.reloading&&
-shoot<=0
-){
-
+!player.reloading
+)
 fireFast();
 
-}
-
-
-// FIRE SCATTER IMMEDIATELY
-
-if(
+else if(
 player.weapon==="scatter"&&
-!player.scatterReloading&&
-shoot<=0
-){
-
+!player.scatterReloading
+)
 fireScatter();
-
-}
-
 
 return;
 
 }
 
 
-// MOVE JOYSTICK
-
-const moveDistance=
+if(
 Math.hypot(
 e.clientX-joy.x,
 e.clientY-joy.y
-);
-
-if(
-moveDistance<=
-joy.r+25
+)<=joy.r+30
 ){
 
 joy.on=true;
-
-joy.pointerId=e.pointerId;
 
 setJoystick(
 e.clientX,
 e.clientY
 );
-
-return;
 
 }
 
@@ -1295,12 +1605,11 @@ c.addEventListener(
 "pointermove",
 e=>{
 
-e.preventDefault();
-
+if(e.pointerType==="touch")
+return;
 
 if(
-aimJoy.on&&
-e.pointerId===aimJoy.pointerId
+aimJoy.on
 ){
 
 setAimJoystick(
@@ -1310,10 +1619,8 @@ e.clientY
 
 }
 
-
 if(
-joy.on&&
-e.pointerId===joy.pointerId
+joy.on
 ){
 
 setJoystick(
@@ -1330,69 +1637,22 @@ e.clientY
 // POINTER UP
 // =========================
 
-function releasePointer(e){
+c.addEventListener(
+"pointerup",
+e=>{
 
-if(
-aimJoy.on&&
-e.pointerId===aimJoy.pointerId
-){
+if(e.pointerType==="touch")
+return;
 
 aimJoy.on=false;
-
-aimJoy.pointerId=null;
-
 aimJoy.dx=1;
 aimJoy.dy=0;
 
-aimJoystickPos();
-
-aimJoy.tx=aimJoy.x;
-aimJoy.ty=aimJoy.y;
-
-}
-
-
-if(
-joy.on&&
-e.pointerId===joy.pointerId
-){
-
 joy.on=false;
-
-joy.pointerId=null;
-
 joy.dx=0;
 joy.dy=0;
 
-joystickPos();
-
-joy.tx=joy.x;
-joy.ty=joy.y;
-
-}
-
-}
-
-
-c.addEventListener(
-"pointerup",
-releasePointer
-);
-
-c.addEventListener(
-"pointercancel",
-releasePointer
-);
-
-addEventListener(
-"pointerup",
-releasePointer
-);
-
-addEventListener(
-"pointercancel",
-releasePointer
-);
+});
 
 
 // =========================
@@ -2004,8 +2264,6 @@ return;
 
 if(i===0){
 
-// SCATTER
-
 player.weapon="scatter";
 
 player.shots=1;
@@ -2029,8 +2287,6 @@ player.scatterReloading=false;
 }
 
 else{
-
-// FAST
 
 player.weapon="fast";
 
