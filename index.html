@@ -724,7 +724,7 @@ function spawnBoss(){
 
         r:56,
 
-        /* BOSS NOW HAS 20,000 HP */
+        /* EXACTLY 20,000 HP */
         hp:20000,
         maxHp:20000,
 
@@ -1132,22 +1132,18 @@ function getDeviceRects(){
 
     const gap=12;
 
+    const available=p.w-gap;
+
     const mobileW=
         Math.min(
-            210,
-            (p.w-gap)/2
+            215,
+            available*.55
         );
 
     const computerW=
-        Math.min(
-            190,
-            (p.w-gap)/2
-        );
+        available-mobileW;
 
-    const total=
-        mobileW+
-        gap+
-        computerW;
+    const total=mobileW+gap+computerW;
 
     const x=
         p.x+
@@ -1171,28 +1167,45 @@ function getDeviceRects(){
     };
 }
 
-function getAutoShootRect(){
+
+/*
+   AUTO SHOOT + EXTRA INFO ARE NOW
+   SIDE BY SIDE.
+*/
+
+function getSettingsToggleRects(){
 
     const p=getSettingsPanel();
 
+    const gap=10;
+
+    const w=
+        (p.w-44-gap)/2;
+
     return{
-        x:p.x+22,
-        y:p.y+175,
-        w:p.w-44,
-        h:58
+
+        auto:{
+            x:p.x+22,
+            y:p.y+175,
+            w:w,
+            h:64
+        },
+
+        extra:{
+            x:p.x+22+w+gap,
+            y:p.y+175,
+            w:w,
+            h:64
+        }
     };
 }
 
+function getAutoShootRect(){
+    return getSettingsToggleRects().auto;
+}
+
 function getExtraInfoRect(){
-
-    const p=getSettingsPanel();
-
-    return{
-        x:p.x+22,
-        y:p.y+245,
-        w:p.w-44,
-        h:58
-    };
+    return getSettingsToggleRects().extra;
 }
 
 function getBackRect(){
@@ -1502,6 +1515,145 @@ function togglePause(){
 
 
 /* =========================================================
+   PROJECTILE UPDATE
+       
+   PROJECTILES ARE NOW COMPLETELY
+   INDEPENDENT OF WAVE BREAKS.
+========================================================= */
+
+function updateProjectiles(dt){
+
+    /* PLAYER PROJECTILES */
+
+    for(const s of shots){
+
+        s.x+=s.vx*dt;
+        s.y+=s.vy*dt;
+
+        s.life-=dt;
+
+        for(const e of enemies){
+
+            if(e.hp<=0) continue;
+
+            const dx=e.x-s.x;
+            const dy=e.y-s.y;
+
+            const d=Math.hypot(dx,dy);
+
+            if(
+                d<
+                e.r+s.r
+            ){
+
+                e.hp-=s.damage;
+
+                if(s.pierceLeft>0){
+
+                    s.pierceLeft--;
+
+                    s.damage*=.5;
+
+                }
+                else{
+
+                    s.life=0;
+                }
+
+                if(e.hp<=0){
+
+                    score+=
+                        e.isBoss
+                        ?100
+                        :10;
+
+                    orbs.push({
+
+                        x:e.x,
+                        y:e.y,
+
+                        r:6,
+
+                        value:25
+                    });
+
+                    if(e.isBoss){
+
+                        for(let i=0;i<4;i++){
+
+                            orbs.push({
+
+                                x:e.x+
+                                    (Math.random()-.5)*50,
+
+                                y:e.y+
+                                    (Math.random()-.5)*50,
+
+                                r:6,
+
+                                value:25
+                            });
+                        }
+                    }
+                }
+
+                break;
+            }
+        }
+    }
+
+
+    /* ENEMY PROJECTILES */
+
+    for(const s of enemyShots){
+
+        s.x+=s.vx*dt;
+        s.y+=s.vy*dt;
+
+        s.life-=dt;
+
+        const dx=player.x-s.x;
+        const dy=player.y-s.y;
+
+        const d=Math.hypot(dx,dy);
+
+        if(
+            d<
+            player.r+s.r
+        ){
+
+            player.hp-=s.damage;
+
+            s.life=0;
+        }
+    }
+
+
+    /* CLEANUP */
+
+    shots=
+        shots.filter(
+            s=>
+                s.life>0 &&
+                s.x>-100 &&
+                s.x<W+100 &&
+                s.y>-100 &&
+                s.y<H+100
+        );
+
+    enemyShots=
+        enemyShots.filter(
+            s=>
+                s.life>0 &&
+                s.x>-150 &&
+                s.x<W+150 &&
+                s.y>-150 &&
+                s.y<H+150
+        );
+}
+
+
+/* =========================================================
    UPDATE
 ========================================================= */
 
@@ -1607,18 +1759,17 @@ function update(dt){
     /* =====================================================
        WAVE BREAK
        
-       IMPORTANT:
-       We DO NOT return here anymore.
-       Projectiles continue moving and expiring.
+       ONLY wave spawning/enemy AI pauses.
+       PROJECTILES ARE UPDATED SEPARATELY BELOW.
     ===================================================== */
 
     let waveBreaking=false;
 
     if(waveBreakTimer>0){
 
-        waveBreakTimer-=dt;
-
         waveBreaking=true;
+
+        waveBreakTimer-=dt;
 
         if(waveBreakTimer<=0){
 
@@ -1688,52 +1839,40 @@ function update(dt){
        SHOOTING
     ===================================================== */
 
-    if(!waveBreaking){
+    shoot-=dt;
 
-        if(autoShoot){
+    if(autoShoot){
 
-            if(player.weapon==="fast"){
+        if(player.weapon==="fast"){
 
-                if(!player.reloading){
-                    fireFast();
-                }
-
-            }
-            else if(player.weapon==="scatter"){
-
-                fireScatter();
-
-            }
-            else{
-
-                fireBase();
-            }
-        }
-
-        shoot-=dt;
-
-
-        if(aimJoy.on){
-
-            if(player.weapon==="fast"){
+            if(!player.reloading){
                 fireFast();
             }
-            else if(player.weapon==="scatter"){
-                fireScatter();
-            }
-            else{
-                fireBase();
-            }
+
+        }
+        else if(player.weapon==="scatter"){
+
+            fireScatter();
+
+        }
+        else{
+
+            fireBase();
         }
     }
-    else{
 
-        /*
-           Cooldown still ticks during wave breaks.
-           This prevents weapons from feeling frozen.
-        */
 
-        shoot-=dt;
+    if(aimJoy.on){
+
+        if(player.weapon==="fast"){
+            fireFast();
+        }
+        else if(player.weapon==="scatter"){
+            fireScatter();
+        }
+        else{
+            fireBase();
+        }
     }
 
 
@@ -1813,8 +1952,7 @@ function update(dt){
             const pdx=player.x-e.x;
             const pdy=player.y-e.y;
 
-            const pd=
-                Math.hypot(pdx,pdy);
+            const pd=Math.hypot(pdx,pdy);
 
             if(
                 pd<
@@ -1830,158 +1968,18 @@ function update(dt){
 
 
     /* =====================================================
-       PLAYER SHOTS
+       PROJECTILES
        
-       These ALWAYS update, including wave breaks.
+       THIS IS ALWAYS RUN.
+       NO WAVE-BREAK CONDITION.
     ===================================================== */
 
-    for(const s of shots){
-
-        s.x+=s.vx*dt;
-        s.y+=s.vy*dt;
-
-        s.life-=dt;
-
-        if(waveBreaking){
-            continue;
-        }
-
-        for(const e of enemies){
-
-            if(e.hp<=0) continue;
-
-            const dx=e.x-s.x;
-            const dy=e.y-s.y;
-
-            const d=
-                Math.hypot(dx,dy);
-
-            if(
-                d<
-                e.r+s.r
-            ){
-
-                e.hp-=s.damage;
-
-                if(
-                    s.pierceLeft>0
-                ){
-
-                    s.pierceLeft--;
-
-                    s.damage*=.5;
-
-                }
-                else{
-
-                    s.life=0;
-                }
-
-                if(e.hp<=0){
-
-                    score+=
-                        e.isBoss
-                        ?100
-                        :10;
-
-                    orbs.push({
-
-                        x:e.x,
-                        y:e.y,
-
-                        r:6,
-
-                        value:25
-                    });
-
-                    if(e.isBoss){
-
-                        for(let i=0;i<4;i++){
-
-                            orbs.push({
-
-                                x:e.x+
-                                    (Math.random()-.5)*50,
-
-                                y:e.y+
-                                    (Math.random()-.5)*50,
-
-                                r:6,
-
-                                value:25
-                            });
-                        }
-                    }
-                }
-
-                break;
-            }
-        }
-    }
+    updateProjectiles(dt);
 
 
     /* =====================================================
-       ENEMY SHOTS
-       
-       These ALWAYS update, including wave breaks.
+       ENEMY CLEANUP
     ===================================================== */
-
-    for(const s of enemyShots){
-
-        s.x+=s.vx*dt;
-        s.y+=s.vy*dt;
-
-        s.life-=dt;
-
-        if(waveBreaking){
-            continue;
-        }
-
-        const dx=
-            player.x-s.x;
-
-        const dy=
-            player.y-s.y;
-
-        const d=
-            Math.hypot(dx,dy);
-
-        if(
-            d<
-            player.r+s.r
-        ){
-
-            player.hp-=s.damage;
-
-            s.life=0;
-        }
-    }
-
-
-    /* =====================================================
-       CLEANUP
-    ===================================================== */
-
-    shots=
-        shots.filter(
-            s=>
-                s.life>0 &&
-                s.x>-100 &&
-                s.x<W+100 &&
-                s.y>-100 &&
-                s.y<H+100
-        );
-
-    enemyShots=
-        enemyShots.filter(
-            s=>
-                s.life>0 &&
-                s.x>-150 &&
-                s.x<W+150 &&
-                s.y>-150 &&
-                s.y<H+150
-        );
-
 
     if(!waveBreaking){
 
@@ -2001,8 +1999,7 @@ function update(dt){
         const dx=player.x-o.x;
         const dy=player.y-o.y;
 
-        const d=
-            Math.hypot(dx,dy);
+        const d=Math.hypot(dx,dy);
 
         if(d<player.magnet){
 
@@ -2028,8 +2025,7 @@ function update(dt){
         const pdx=player.x-o.x;
         const pdy=player.y-o.y;
 
-        const pd=
-            Math.hypot(pdx,pdy);
+        const pd=Math.hypot(pdx,pdy);
 
         if(
             pd<
@@ -2571,28 +2567,24 @@ function drawSettings(){
     );
 
 
-    /* AUTO SHOOT */
+    /* =====================================================
+       AUTO SHOOT + EXTRA INFO
+    ===================================================== */
 
-    const auto=
-        getAutoShootRect();
+    const toggles=
+        getSettingsToggleRects();
 
     drawSettingsToggle(
-        auto,
+        toggles.auto,
         "AUTO SHOOT",
-        "Automatically targets the nearest enemy",
+        "Nearest enemy",
         autoShoot
     );
 
-
-    /* EXTRA INFO */
-
-    const info=
-        getExtraInfoRect();
-
     drawSettingsToggle(
-        info,
+        toggles.extra,
         "EXTRA INFO",
-        "Show detailed player and weapon stats",
+        "Stats display",
         extraInfo
     );
 
@@ -2639,34 +2631,42 @@ function drawSettingsToggle(
         2
     );
 
+    /*
+       On narrow phones the text stays clear
+       because the toggle itself is positioned
+       in the lower-right corner.
+    */
+
     text(
         title,
-        r.x+18,
-        r.y+18,
-        14,
+        r.x+10,
+        r.y+19,
+        12,
         "#dbeaf0"
     );
 
     text(
         subtitle,
-        r.x+18,
-        r.y+40,
-        10,
+        r.x+10,
+        r.y+38,
+        8,
         "#687d8b"
     );
 
-    const toggleW=48;
-    const toggleH=26;
+    const toggleW=38;
+    const toggleH=22;
 
     const tx=
         r.x+
         r.w-
         toggleW-
-        18;
+        9;
 
     const ty=
         r.y+
-        (r.h-toggleH)/2;
+        r.h-
+        toggleH-
+        8;
 
     rect(
         tx,
@@ -2691,10 +2691,10 @@ function drawSettingsToggle(
 
     ctx.arc(
         value
-        ?tx+toggleW-13
-        :tx+13,
+        ?tx+toggleW-11
+        :tx+11,
         ty+toggleH/2,
-        7,
+        6,
         0,
         Math.PI*2
     );
@@ -3284,10 +3284,6 @@ function drawHUD(){
     }
 
 
-    /* =====================================================
-       EXTRA INFO PANEL
-    ===================================================== */
-
     if(extraInfo){
 
         drawExtraInfo();
@@ -3301,31 +3297,33 @@ function drawHUD(){
 
 function drawExtraInfo(){
 
-    const narrow=W<430;
-
     const panelW=
         Math.min(
-            245,
+            225,
             W-28
         );
 
-    const panelH=
-        player.weapon==="fast"
-        ?145
-        :125;
+    let panelH;
 
-    const x=
-        W-panelW-14;
+    if(player.weapon==="scatter"){
+        panelH=158;
+    }
+    else if(player.weapon==="fast"){
+        panelH=190;
+    }
+    else{
+        panelH=105;
+    }
 
-    const y=
-        86;
+    const x=W-panelW-14;
+    const y=86;
 
     rect(
         x,
         y,
         panelW,
         panelH,
-        "rgba(9,15,21,.94)",
+        "rgba(9,15,21,.96)",
         "#344954",
         2
     );
@@ -3338,29 +3336,37 @@ function drawExtraInfo(){
         "#24515d"
     );
 
+
     text(
         "EXTRA INFO",
-        x+12,
-        y+17,
+        x+11,
+        y+16,
         10,
         "#57e9ff"
     );
 
     text(
-        "WAVE "+wave+
-        "   LV "+level,
-        x+12,
-        y+35,
-        10,
+        "LEVEL "+level,
+        x+11,
+        y+33,
+        9,
         "#d5e5eb"
     );
 
     text(
-        "XP "+Math.floor(xp)+
-        " / "+Math.floor(xpNext),
-        x+12,
-        y+51,
+        "XP "+Math.floor(xp)+" / "+Math.floor(xpNext),
+        x+11,
+        y+48,
         9,
+        "#8298a4"
+    );
+
+    text(
+        "SCORE "+score+
+        "   WAVE "+wave,
+        x+11,
+        y+63,
+        8,
         "#8298a4"
     );
 
@@ -3369,85 +3375,154 @@ function drawExtraInfo(){
 
         text(
             "SCATTER BLASTER",
-            x+12,
-            y+69,
-            10,
+            x+11,
+            y+81,
+            9,
             "#e0edf1"
         );
 
         text(
-            "DMG "+Math.round(player.damage)+
-            "   SHOTS "+player.shots,
-            x+12,
-            y+86,
-            9,
+            "TIER "+player.scatterTier,
+            x+11,
+            y+96,
+            8,
+            "#8298a4"
+        );
+
+        text(
+            "DAMAGE "+
+            Math.round(player.damage),
+            x+11,
+            y+111,
+            8,
+            "#8298a4"
+        );
+
+        text(
+            "SHOTS "+
+            player.shots,
+            x+11,
+            y+126,
+            8,
             "#8298a4"
         );
 
         text(
             "COOLDOWN "+
-            player.scatterFireRate.toFixed(2)+
-            "s",
-            x+12,
-            y+102,
-            9,
+            player.scatterFireRate.toFixed(2)+"s",
+            x+11,
+            y+141,
+            8,
             "#8298a4"
         );
 
         text(
-            "VELOCITY "+
+            "BULLET SPEED "+
             Math.round(player.bulletSpeed),
-            x+12,
-            y+118,
-            9,
+            x+11,
+            y+156,
+            8,
             "#8298a4"
         );
 
+        text(
+            "PIERCE "+
+            (player.scatterPierce?"1":"0"),
+            x+120,
+            y+156,
+            8,
+            player.scatterPierce
+            ?"#57e9ff"
+            :"#8298a4"
+        );
     }
+
+
     else if(player.weapon==="fast"){
 
         text(
             "FAST PEW PEW",
-            x+12,
-            y+69,
-            10,
+            x+11,
+            y+81,
+            9,
             "#e0edf1"
         );
 
         text(
-            "DMG "+Math.round(player.damage)+
-            "   SHOTS "+player.shots,
-            x+12,
-            y+86,
-            9,
+            "DAMAGE "+
+            Math.round(player.damage),
+            x+11,
+            y+97,
+            8,
+            "#8298a4"
+        );
+
+        text(
+            "SHOTS "+
+            player.shots,
+            x+11,
+            y+112,
+            8,
             "#8298a4"
         );
 
         text(
             "COOLDOWN "+
-            player.fireRate.toFixed(3)+
-            "s",
-            x+12,
-            y+102,
-            9,
+            player.fireRate.toFixed(3)+"s",
+            x+11,
+            y+127,
+            8,
             "#8298a4"
         );
 
         text(
-            "VELOCITY "+
+            "BULLET SPEED "+
             Math.round(player.bulletSpeed),
-            x+12,
-            y+118,
-            9,
+            x+11,
+            y+142,
+            8,
+            "#8298a4"
+        );
+
+        text(
+            "AMMO "+
+            player.ammo+
+            "/"+
+            player.maxAmmo,
+            x+11,
+            y+157,
+            8,
             "#8298a4"
         );
 
         text(
             "RELOAD "+
-            player.reloadTime.toFixed(1)+
-            "s",
-            x+12,
-            y+134,
+            player.reloadTime.toFixed(1)+"s",
+            x+11,
+            y+172,
+            8,
+            "#8298a4"
+        );
+
+        text(
+            "DMG UP "+
+            player.fastDamageUpgrades+
+            "   SPEED UP "+
+            player.fastAttackSpeedUpgrades,
+            x+11,
+            y+187,
+            7,
+            "#60737f"
+        );
+    }
+
+
+    else{
+
+        text(
+            "NO WEAPON",
+            x+11,
+            y+82,
             9,
             "#8298a4"
         );
@@ -3495,28 +3570,32 @@ function drawEnemyHPBar(e){
 
     const width=
         e.isBoss
-        ?130
-        :30;
+        ?150
+        :34;
 
     const height=
         e.isBoss
-        ?8
-        :4;
+        ?9
+        :5;
 
     const y=
         e.y-
         e.r-
-        (e.isBoss?15:9);
+        (e.isBoss?17:10);
+
+    /* Background */
 
     rect(
         e.x-width/2,
         y,
         width,
         height,
-        "#171b20",
+        "#11151a",
         "#3c4850",
         1
     );
+
+    /* HP */
 
     rect(
         e.x-width/2,
@@ -3524,7 +3603,10 @@ function drawEnemyHPBar(e){
         width*
         Math.max(
             0,
-            e.hp/e.maxHp
+            Math.min(
+                1,
+                e.hp/e.maxHp
+            )
         ),
         height,
         e.isBoss
@@ -3618,8 +3700,6 @@ function drawEnemies(){
                 3,
                 "#180d12"
             );
-
-            /* NEW: normal enemy HP bar */
 
             drawEnemyHPBar(e);
         }
@@ -3728,10 +3808,7 @@ function drawJoystick(j){
 
     ctx.save();
 
-    ctx.globalAlpha=
-        j.on
-        ? .35
-        : .2;
+    ctx.globalAlpha=j.on ? .35 : .2;
 
     ctx.strokeStyle="#8ea8b6";
     ctx.lineWidth=2;
@@ -3748,10 +3825,7 @@ function drawJoystick(j){
 
     ctx.stroke();
 
-    ctx.globalAlpha=
-        j.on
-        ? .55
-        : .3;
+    ctx.globalAlpha=j.on ? .55 : .3;
 
     ctx.fillStyle="#78929f";
 
@@ -4189,8 +4263,6 @@ c.addEventListener(
             const y=touch.clientY;
 
 
-            /* MENU */
-
             if(!started){
 
                 if(settingsOpen){
@@ -4267,6 +4339,8 @@ c.addEventListener(
                     const cards=
                         getWeaponCardRects();
 
+                    let selected=false;
+
                     for(
                         let i=0;
                         i<cards.length;
@@ -4290,8 +4364,14 @@ c.addEventListener(
 
                             applyEquippedWeapon();
 
-                            continue;
+                            selected=true;
+
+                            break;
                         }
+                    }
+
+                    if(selected){
+                        continue;
                     }
 
                     if(
@@ -4348,8 +4428,6 @@ c.addEventListener(
             }
 
 
-            /* GAME OVER */
-
             if(gameOver){
 
                 const r={
@@ -4371,8 +4449,6 @@ c.addEventListener(
                 continue;
             }
 
-
-            /* WEAPON CHOICE */
 
             if(weaponChoiceOpen){
 
@@ -4400,8 +4476,6 @@ c.addEventListener(
                 continue;
             }
 
-
-            /* UPGRADE */
 
             if(upgradeOpen){
 
@@ -4432,8 +4506,6 @@ c.addEventListener(
             }
 
 
-            /* PAUSE */
-
             if(
                 pointInRect(
                     x,y,
@@ -4450,8 +4522,6 @@ c.addEventListener(
                 continue;
             }
 
-
-            /* TWO-FINGER */
 
             if(
                 aimTouchId===null &&
