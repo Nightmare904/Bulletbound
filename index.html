@@ -24,6 +24,7 @@ display:block;
 width:100%;
 height:100%;
 touch-action:none;
+image-rendering:auto;
 }
 </style>
 </head>
@@ -75,13 +76,6 @@ let gameBottom=0;
 let controlTop=0;
 
 function updateArena(){
-
-/*
-Vertical phone layout.
-
-The bottom section is reserved for controls.
-The arena occupies most of the upper screen.
-*/
 
 const controlHeight=
 Math.min(
@@ -732,11 +726,6 @@ applyEquippedWeapon();
 
 function startGame(){
 
-/*
-No landscape lock.
-The game stays vertical inside the browser.
-*/
-
 started=true;
 
 loadoutOpen=false;
@@ -1110,8 +1099,8 @@ panel.w-32;
 
 let mobileW=
 Math.min(
-185,
-available*.54
+195,
+available*.56
 );
 
 let computerW=
@@ -1126,7 +1115,7 @@ available-gap-computerW;
 
 }
 
-const deviceH=70;
+const deviceH=74;
 
 const total=
 mobileW+
@@ -1137,7 +1126,7 @@ const startX=
 (W-total)/2;
 
 const y=
-panel.y+65;
+panel.y+64;
 
 return{
 
@@ -1175,7 +1164,7 @@ const autoH=54;
 
 return{
 x:(W-autoW)/2,
-y:panel.y+170,
+y:panel.y+175,
 w:autoW,
 h:autoH
 };
@@ -1199,6 +1188,85 @@ y:H-75,
 w:backW,
 h:backH
 };
+
+}
+
+
+// =========================
+// ICONS
+// =========================
+
+function drawPhoneIcon(x,y,scale=1){
+
+ctx.save();
+
+ctx.strokeStyle="#65e6ff";
+ctx.lineWidth=2;
+
+ctx.strokeRect(
+x-8*scale,
+y-13*scale,
+16*scale,
+26*scale
+);
+
+ctx.fillStyle="#65e6ff";
+
+ctx.fillRect(
+x-4*scale,
+y+8*scale,
+8*scale,
+2*scale
+);
+
+ctx.restore();
+
+}
+
+
+function drawMonitorIcon(x,y,scale=1){
+
+ctx.save();
+
+ctx.strokeStyle="#394355";
+ctx.lineWidth=2;
+
+ctx.strokeRect(
+x-15*scale,
+y-10*scale,
+30*scale,
+20*scale
+);
+
+ctx.beginPath();
+
+ctx.moveTo(
+x-6*scale,
+y+14*scale
+);
+
+ctx.lineTo(
+x+6*scale,
+y+14*scale
+);
+
+ctx.stroke();
+
+ctx.beginPath();
+
+ctx.moveTo(
+x,
+y+10*scale
+);
+
+ctx.lineTo(
+x,
+y+14*scale
+);
+
+ctx.stroke();
+
+ctx.restore();
 
 }
 
@@ -1315,7 +1383,6 @@ y<=42
 function getWeaponCardRects(){
 
 const gap=12;
-const cardH=175;
 
 if(H>W){
 
@@ -1325,14 +1392,26 @@ Math.min(
 W-40
 );
 
+const cardH=
+Math.min(
+175,
+Math.max(
+135,
+(H-260-gap)/2
+)
+);
+
 const totalH=
 cardH*2+
 gap;
 
 const startY=
 Math.max(
-150,
+145,
+Math.min(
+H-75-totalH,
 H/2-totalH/2+5
+)
 );
 
 return[
@@ -1363,6 +1442,8 @@ Math.min(
 (W-36-gap)/2,
 190
 );
+
+const cardH=175;
 
 const totalW=
 cardW*2+gap;
@@ -1427,12 +1508,22 @@ Math.min(
 W-40
 );
 
-const cardH=190;
+const cardH=
+Math.min(
+190,
+Math.max(
+170,
+H-250
+)
+);
 
 const cardY=
 Math.max(
-150,
-H/2-85
+125,
+Math.min(
+H-100-cardH,
+H/2-cardH/2
+)
 );
 
 return[
@@ -1449,10 +1540,9 @@ h:cardH
 }
 
 
-// Fast
+// FAST
 
 const gap=12;
-const cardH=175;
 
 if(H>W){
 
@@ -1462,14 +1552,26 @@ Math.min(
 W-40
 );
 
+const cardH=
+Math.min(
+175,
+Math.max(
+135,
+(H-270-gap)/2
+)
+);
+
 const totalH=
 cardH*2+
 gap;
 
 const startY=
 Math.max(
-145,
+120,
+Math.min(
+H-75-totalH,
 H/2-totalH/2+5
+)
 );
 
 return[
@@ -1500,6 +1602,8 @@ Math.min(
 (W-36-gap)/2,
 190
 );
+
+const cardH=175;
 
 const totalW=
 cardW*2+gap;
@@ -2033,7 +2137,6 @@ return;
 
 if(gameOver){
 
-reset();
 startGame();
 return;
 
@@ -2398,7 +2501,6 @@ return;
 
 if(gameOver){
 
-reset();
 startGame();
 return;
 
@@ -3708,15 +3810,32 @@ devices.mobile.w,
 devices.mobile.h
 );
 
+drawPhoneIcon(
+devices.mobile.x+24,
+devices.mobile.y+37,
+.8
+);
+
 ctx.fillStyle="#fff";
 
-ctx.font="bold 19px system-ui";
+ctx.font="bold 17px system-ui";
 
 ctx.fillText(
-"📱 MOBILE",
+"MOBILE",
 devices.mobile.x+
-devices.mobile.w/2,
-devices.mobile.y+43
+devices.mobile.w/2+12,
+devices.mobile.y+33
+);
+
+ctx.fillStyle="#7d8799";
+
+ctx.font="9px system-ui";
+
+ctx.fillText(
+"ACTIVE",
+devices.mobile.x+
+devices.mobile.w/2+12,
+devices.mobile.y+51
 );
 
 
@@ -3742,6 +3861,12 @@ devices.computer.w,
 devices.computer.h
 );
 
+drawMonitorIcon(
+devices.computer.x+22,
+devices.computer.y+35,
+.65
+);
+
 ctx.fillStyle="#394355";
 
 ctx.font="bold 11px system-ui";
@@ -3749,8 +3874,8 @@ ctx.font="bold 11px system-ui";
 ctx.fillText(
 "COMPUTER",
 devices.computer.x+
-devices.computer.w/2,
-devices.computer.y+32
+devices.computer.w/2+12,
+devices.computer.y+31
 );
 
 ctx.font="9px system-ui";
@@ -3758,7 +3883,7 @@ ctx.font="9px system-ui";
 ctx.fillText(
 "COMING SOON",
 devices.computer.x+
-devices.computer.w/2,
+devices.computer.w/2+12,
 devices.computer.y+49
 );
 
@@ -4804,24 +4929,10 @@ W-59,
 joystickPos();
 aimJoystickPos();
 
-
-/*
-IMPORTANT:
-The original version had:
-
-ctx.globalAlpha=joy.on?.35:.2;
-
-That is invalid JavaScript syntax.
-
-It must use the actual ternary operator:
-
-joy.on ? .35 : .2
-*/
-
 ctx.globalAlpha=
 joy.on
-?.35
-:.2;
+?0.35
+:0.2;
 
 ctx.fillStyle="#65e6ff";
 
@@ -4856,8 +4967,8 @@ ctx.fill();
 
 ctx.globalAlpha=
 aimJoy.on
-?.35
-:.2;
+?0.35
+:0.2;
 
 ctx.fillStyle="#ffdf4d";
 
