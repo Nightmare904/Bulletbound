@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html>
 <head>
@@ -7,5145 +6,2516 @@
 
 <style>
 html,body{
-margin:0;
-width:100%;
-height:100%;
-overflow:hidden;
-background:#080a10;
-touch-action:none;
--webkit-user-select:none;
-user-select:none;
+  margin:0;
+  width:100%;
+  height:100%;
+  min-height:100dvh;
+  overflow:hidden;
+  background:#080a10;
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+  overscroll-behavior:none;
 }
 
 canvas{
-display:block;
-width:100%;
-height:100%;
-touch-action:none;
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
 }
 </style>
 </head>
 
 <body>
-
 <canvas id="c"></canvas>
 
 <script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
 
-const c=document.getElementById("c");
-const ctx=c.getContext("2d");
-
-let W,H,dpr;
-
-function resize(){
-
-dpr=Math.min(devicePixelRatio||1,2);
-
-W=innerWidth;
-H=innerHeight;
-
-c.width=W*dpr;
-c.height=H*dpr;
-
-ctx.setTransform(dpr,0,0,dpr,0,0);
-
-updateArena();
-joystickPos();
-aimJoystickPos();
-
-}
-
-addEventListener("resize",resize);
-
-
-// =========================
-// ARENA
-// =========================
-
-const arena={
-left:14,
-right:0,
-top:72,
-bottom:0
-};
+let W=0,H=0,DPR=1;
 
 let gameBottom=0;
 let controlTop=0;
 
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+
+  W=window.innerWidth;
+  H=window.innerHeight;
+
+  canvas.width=Math.floor(W*DPR);
+  canvas.height=Math.floor(H*DPR);
+
+  canvas.style.width=W+"px";
+  canvas.style.height=H+"px";
+
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  updateArena();
+}
+
+window.addEventListener("resize",resize);
+
+const arena={
+  left:14,
+  right:0,
+  top:72,
+  bottom:0
+};
+
 function updateArena(){
-
-/*
-Vertical phone layout.
-
-The bottom section is reserved for controls.
-The arena occupies most of the upper screen.
-*/
-
-controlTop=H-150;
-
-arena.left=14;
-arena.right=W-14;
-arena.top=72;
-arena.bottom=H-controlTop;
-
-gameBottom=controlTop-8;
-
-}
-
-
-// =========================
-// PLAYER
-// =========================
-
-const player={
-
-x:0,
-y:0,
-r:11,
-
-hp:100,
-maxHp:100,
-
-damage:10,
-speed:110,
-magnet:70,
-
-bulletSpeed:480,
-
-fireRate:.28,
-
-shots:1,
-
-aim:0,
-aimTarget:0,
-aimSensitivity:.5,
-
-weapon:null,
-
-// Scatter
-
-scatterTier:1,
-scatterPierce:false,
-scatterDamage:20,
-scatterFireRate:1.5,
-
-// Fast
-
-fastDamageUpgrades:0,
-fastAttackSpeedUpgrades:0,
-fastVelocityUpgrades:0,
-ammoCapacityUpgrades:0,
-reloadTimeUpgrades:0,
-
-maxAmmo:8,
-ammo:8,
-
-reloadTime:2,
-reloadTimer:0,
-reloading:false
-
-};
-
-
-// =========================
-// GAME DATA
-// =========================
-
-let enemies=[];
-let shots=[];
-let enemyShots=[];
-let orbs=[];
-
-let score=0;
-
-let wave=1;
-let waveTotal=0;
-let waveSpawned=0;
-let waveSpawnTimer=0;
-let waveBreakTimer=0;
-
-let shoot=0;
-
-let last=0;
-
-let xp=0;
-let level=1;
-let xpNext=100;
-
-let paused=false;
-
-let upgradeChoices=[];
-let upgradeOpen=false;
-
-let weaponChoiceOpen=false;
-let loadoutOpen=false;
-
-let gameOver=false;
-let started=false;
-
-let equippedWeapon=null;
-
-let settingsOpen=false;
-let autoShoot=false;
-let selectedDevice="mobile";
-
-
-// =========================
-// JOYSTICKS
-// =========================
-
-let joy={
-
-on:false,
-
-x:82,
-y:0,
-
-tx:82,
-ty:0,
-
-dx:0,
-dy:0,
-
-r:58,
-knobR:24
-
-};
-
-
-let aimJoy={
-
-on:false,
-
-x:0,
-y:0,
-
-tx:0,
-ty:0,
-
-dx:1,
-dy:0,
-
-r:58,
-knobR:24
-
-};
-
-
-let moveTouchId=null;
-let aimTouchId=null;
-
-
-// =========================
-// WEAPON SETUP
-// =========================
-
-function equipScatterBlaster(){
-
-player.weapon="scatter";
-
-player.shots=1;
-
-player.damage=20;
-
-player.scatterTier=1;
-
-player.scatterPierce=false;
-
-player.scatterDamage=20;
-
-player.scatterFireRate=1.5;
-
-player.fireRate=1.5;
-
-player.bulletSpeed=480;
-
-shoot=0;
-
-}
-
-
-function equipFastPewPew(){
-
-player.weapon="fast";
-
-player.shots=1;
-
-player.damage=10;
-
-player.fireRate=.14;
-
-player.bulletSpeed=480;
-
-player.maxAmmo=8;
-
-player.ammo=8;
-
-player.reloadTime=2;
-
-player.reloadTimer=0;
-
-player.reloading=false;
-
-shoot=0;
-
-}
-
-
-function applyEquippedWeapon(){
-
-if(equippedWeapon==="scatter"){
-
-equipScatterBlaster();
-
-}
-
-else if(equippedWeapon==="fast"){
-
-equipFastPewPew();
-
-}
-
-}
-
-
-// =========================
-// SCATTER UPGRADES
-// =========================
-
-const scatterTierUpgrades=[
-
-{
-
-tier:2,
-
-name:"Scatter Blaster Tier 2",
-
-desc:"+1 shot fired. Damage increases from 20 to 30.",
-
-apply:()=>{
-
-player.scatterTier=2;
-player.shots=2;
-player.damage=30;
-player.scatterDamage=30;
-
-}
-
-},
-
-{
-
-tier:3,
-
-name:"Scatter Blaster Tier 3",
-
-desc:"+1 shot fired. Damage increases from 30 to 40.",
-
-apply:()=>{
-
-player.scatterTier=3;
-player.shots=3;
-player.damage=40;
-player.scatterDamage=40;
-
-}
-
-},
-
-{
-
-tier:4,
-
-name:"Scatter Blaster Tier 4",
-
-desc:"+1 shot fired. Damage increases from 40 to 50.",
-
-apply:()=>{
-
-player.scatterTier=4;
-player.shots=4;
-player.damage=50;
-player.scatterDamage=50;
-
-}
-
-},
-
-{
-
-tier:5,
-
-name:"Scatter Blaster Tier 5",
-
-desc:"+1 shot fired. Bullets pierce 1 enemy and lose half their damage.",
-
-apply:()=>{
-
-player.scatterTier=5;
-player.shots=5;
-player.damage=50;
-player.scatterDamage=50;
-player.scatterPierce=true;
-
-}
-
-},
-
-{
-
-tier:6,
-
-name:"Scatter Blaster Tier 6",
-
-desc:"Fire cooldown decreases from 1.5 seconds to 1 second.",
-
-apply:()=>{
-
-player.scatterTier=6;
-player.shots=5;
-player.damage=50;
-player.scatterDamage=50;
-player.scatterFireRate=1;
-player.fireRate=1;
-player.scatterPierce=true;
-
-}
-
-}
-
-];
-
-
-// =========================
-// FAST UPGRADES
-// =========================
-
-const fastPewPewUpgrades=[
-
-{
-
-name:"Pew Pew Power",
-
-desc:"Increase damage by 50%",
-
-apply:()=>{
-
-player.damage*=1.5;
-player.fastDamageUpgrades++;
-
-}
-
-},
-
-{
-
-name:"Rapid Fire",
-
-desc:"Increase attack speed by 25%",
-
-apply:()=>{
-
-player.fireRate/=1.25;
-player.fastAttackSpeedUpgrades++;
-
-}
-
-},
-
-{
-
-name:"Velocity Boost",
-
-desc:"Increase projectile velocity by 50%",
-
-apply:()=>{
-
-player.bulletSpeed*=1.5;
-player.fastVelocityUpgrades++;
-
-}
-
-},
-
-{
-
-name:"Ammo Capacity",
-
-desc:"Increase maximum ammo by 2",
-
-apply:()=>{
-
-player.maxAmmo+=2;
-player.ammo+=2;
-
-player.ammo=Math.min(
-player.ammo,
-player.maxAmmo
-);
-
-player.ammoCapacityUpgrades++;
-
-}
-
-},
-
-{
-
-name:"Quick Reload",
-
-desc:"Decrease reload time by 0.2 seconds",
-
-apply:()=>{
-
-player.reloadTime=Math.max(
-.2,
-player.reloadTime-.2
-);
-
-player.reloadTimeUpgrades++;
-
-}
-
-}
-
-];
-
-
-// =========================
-// WAVES
-// =========================
-
-function getWaveEnemyCount(w){
-
-return 5+(w-1)*2;
-
-}
-
-
-function getWaveSpawnSpeed(w){
-
-return Math.max(
-.35,
-1.15-(w-1)*.055
-);
-
-}
-
-
-function getWaveEnemyHealth(w){
-
-return 100;
-
-}
-
-
-function getWaveEnemySpeed(w){
-
-return(
-35+
-Math.random()*20
-)*
-.5*
-(
-1+
-(w-1)*.035
-);
-
-}
-
-
-function isBossWave(w){
-
-return w%10===0;
-
-}
-
-
-function getWaveNormalCount(w){
-
-return getWaveEnemyCount(w);
-
-}
-
-
-function startWave(){
-
-waveTotal=
-getWaveNormalCount(wave)+
-(isBossWave(wave)?1:0);
-
-waveSpawned=0;
-
-waveSpawnTimer=.5;
-
-}
-
-
-function completeWave(){
-
-player.hp=player.maxHp;
-
-wave++;
-
-waveTotal=0;
-
-waveSpawned=0;
-
-waveSpawnTimer=0;
-
-waveBreakTimer=1;
-
-}
-
-
-// =========================
-// RESET
-// =========================
-
-function reset(){
-
-updateArena();
-
-player.x=(arena.left+arena.right)/2;
-
-player.y=
-(arena.top+gameBottom)/2;
-
-player.hp=100;
-player.maxHp=100;
-
-player.damage=10;
-player.speed=110;
-player.magnet=70;
-player.bulletSpeed=480;
-player.fireRate=.28;
-player.shots=1;
-
-player.aim=0;
-player.aimTarget=0;
-player.aimSensitivity=.5;
-
-player.weapon=null;
-
-
-// Scatter
-
-player.scatterTier=1;
-player.scatterPierce=false;
-player.scatterDamage=20;
-player.scatterFireRate=1.5;
-
-
-// Fast
-
-player.fastDamageUpgrades=0;
-player.fastAttackSpeedUpgrades=0;
-player.fastVelocityUpgrades=0;
-player.ammoCapacityUpgrades=0;
-player.reloadTimeUpgrades=0;
-
-player.maxAmmo=8;
-player.ammo=8;
-
-player.reloadTime=2;
-player.reloadTimer=0;
-player.reloading=false;
-
-
-// Game
-
-enemies=[];
-shots=[];
-enemyShots=[];
-orbs=[];
-
-score=0;
-
-wave=1;
-waveTotal=0;
-waveSpawned=0;
-waveSpawnTimer=0;
-waveBreakTimer=0;
-
-shoot=0;
-
-xp=0;
-level=1;
-xpNext=100;
-
-paused=false;
-
-upgradeChoices=[];
-upgradeOpen=false;
-weaponChoiceOpen=false;
-settingsOpen=false;
-
-gameOver=false;
-
-
-// Touch
-
-moveTouchId=null;
-aimTouchId=null;
-
-joy.on=false;
-joy.dx=0;
-joy.dy=0;
-
-aimJoy.on=false;
-aimJoy.dx=1;
-aimJoy.dy=0;
-
-joystickPos();
-aimJoystickPos();
-
-joy.tx=joy.x;
-joy.ty=joy.y;
-
-aimJoy.tx=aimJoy.x;
-aimJoy.ty=aimJoy.y;
-
-
-// Apply starting weapon
-
-applyEquippedWeapon();
-
-}
-
-
-// =========================
-// START
-// =========================
-
-function startGame(){
-
-/*
-No landscape lock.
-The game stays vertical inside the browser.
-*/
-
-started=true;
-
-loadoutOpen=false;
-
-reset();
-
-startWave();
-
-}
-
-
-// =========================
-// ENEMY
-// =========================
-
-function spawnEnemy(){
-
-const side=
-Math.floor(Math.random()*4);
-
-let x;
-let y;
-
-if(side===0){
-
-x=arena.left-35;
-
-y=
-arena.top+
-Math.random()*
-(gameBottom-arena.top);
-
-}
-
-else if(side===1){
-
-x=arena.right+35;
-
-y=
-arena.top+
-Math.random()*
-(gameBottom-arena.top);
-
-}
-
-else if(side===2){
-
-x=
-arena.left+
-Math.random()*
-(arena.right-arena.left);
-
-y=arena.top-35;
-
-}
-
-else{
-
-x=
-arena.left+
-Math.random()*
-(arena.right-arena.left);
-
-y=gameBottom+35;
-
-}
-
-
-enemies.push({
-
-x:x,
-y:y,
-
-r:14,
-
-hp:100,
-
-speed:getWaveEnemySpeed(wave),
-
-shoot:1+Math.random()*2,
-
-color:
-Math.random()<.5
-?"#ff4f70"
-:"#a66cff"
-
-});
-
-}
-
-
-function spawnBoss(){
-
-const side=
-Math.floor(Math.random()*4);
-
-let x;
-let y;
-
-if(side===0){
-
-x=arena.left-65;
-
-y=
-arena.top+
-Math.random()*
-(gameBottom-arena.top);
-
-}
-
-else if(side===1){
-
-x=arena.right+65;
-
-y=
-arena.top+
-Math.random()*
-(gameBottom-arena.top);
-
-}
-
-else if(side===2){
-
-x=
-arena.left+
-Math.random()*
-(arena.right-arena.left);
-
-y=arena.top-65;
-
-}
-
-else{
-
-x=
-arena.left+
-Math.random()*
-(arena.right-arena.left);
-
-y=gameBottom+65;
-
-}
-
-
-enemies.push({
-
-x:x,
-y:y,
-
-r:56,
-
-hp:1000,
-maxHp:1000,
-
-speed:22,
-
-isBoss:true,
-
-radialShoot:5,
-bigShoot:2.5,
-
-color:"#d83b52"
-
-});
-
-}
-
-
-// =========================
-// JOYSTICK POSITIONS
-// =========================
-
-function joystickPos(){
-
-const controlY=
-controlTop+72;
-
-joy.x=76;
-joy.y=controlY;
-
-}
-
-
-function aimJoystickPos(){
-
-const controlY=
-controlTop+72;
-
-aimJoy.x=W-76;
-aimJoy.y=controlY;
-
-}
-
-
-// =========================
-// MOVE JOYSTICK
-// =========================
-
-function setJoystick(px,py){
-
-joystickPos();
-
-let dx=px-joy.x;
-let dy=py-joy.y;
-
-let l=Math.hypot(dx,dy)||1;
-
-if(l>joy.r){
-
-dx=dx/l*joy.r;
-dy=dy/l*joy.r;
-
-}
-
-joy.dx=dx/joy.r;
-joy.dy=dy/joy.r;
-
-joy.tx=joy.x+dx;
-joy.ty=joy.y+dy;
-
-}
-
-
-// =========================
-// AIM JOYSTICK
-// =========================
-
-function setAimJoystick(px,py){
-
-aimJoystickPos();
-
-let dx=px-aimJoy.x;
-let dy=py-aimJoy.y;
-
-let l=Math.hypot(dx,dy)||1;
-
-if(l>aimJoy.r){
-
-dx=dx/l*aimJoy.r;
-dy=dy/l*aimJoy.r;
-
-}
-
-aimJoy.dx=dx/aimJoy.r;
-aimJoy.dy=dy/aimJoy.r;
-
-aimJoy.tx=aimJoy.x+dx;
-aimJoy.ty=aimJoy.y+dy;
-
-
-if(
-Math.abs(aimJoy.dx)>.01||
-Math.abs(aimJoy.dy)>.01
-){
-
-player.aimTarget=
-Math.atan2(
-aimJoy.dy,
-aimJoy.dx
-);
-
-}
-
-}
-
-
-// =========================
-// BUTTON HITBOXES
-// =========================
-
-function pointInPlay(x,y){
-
-const bw=Math.min(300,W-50);
-const bh=60;
-
-const bx=(W-bw)/2;
-const by=H/2-15;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInLoadoutButton(x,y){
-
-const bw=Math.min(300,W-50);
-const bh=52;
-
-const bx=(W-bw)/2;
-const by=H/2+58;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInSettingsButton(x,y){
-
-const bw=Math.min(300,W-50);
-const bh=52;
-
-const bx=(W-bw)/2;
-const by=H/2+120;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInMobileDevice(x,y){
-
-const gap=12;
-
-const bw=Math.min(
-190,
-W-44-gap
-);
-
-const bh=70;
-
-const total=bw+gap;
-
-const bx=(W-total)/2;
-
-const by=H/2-120;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInAutoShoot(x,y){
-
-const bw=Math.min(300,W-50);
-const bh=54;
-
-const bx=(W-bw)/2;
-const by=H/2-25;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInSettingsBack(x,y){
-
-const bw=Math.min(180,W-50);
-const bh=50;
-
-const bx=(W-bw)/2;
-const by=H-75;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInBackButton(x,y){
-
-const bw=Math.min(180,W-50);
-const bh=50;
-
-const bx=(W-bw)/2;
-const by=H-75;
-
-return(
-x>=bx&&
-x<=bx+bw&&
-y>=by&&
-y<=by+bh
-);
-
-}
-
-
-function pointInPause(x,y){
-
-return(
-x>=W-104&&
-x<=W-14&&
-y>=10&&
-y<=42
-);
-
-}
-
-
-// =========================
-// CARD HITBOX
-// =========================
-
-function pointInCard(x,y,i){
-
-const gap=12;
-
-const cardW=
-Math.min(
-(W-36-gap)/2,
-190
-);
-
-const cardH=175;
-
-const totalW=
-cardW*2+gap;
-
-const startX=
-(W-totalW)/2;
-
-const cardY=
-H/2-85;
-
-const xx=
-startX+
-i*(cardW+gap);
-
-return(
-x>=xx&&
-x<=xx+cardW&&
-y>=cardY&&
-y<=cardY+cardH
-);
-
-}
-
-
-function pointInSingleUpgradeCard(x,y){
-
-const cardW=Math.min(
-360,
-W-40
-);
-
-const cardH=190;
-
-const cardX=(W-cardW)/2;
-const cardY=H/2-85;
-
-return(
-x>=cardX&&
-x<=cardX+cardW&&
-y>=cardY&&
-y<=cardY+cardH
-);
-
-}
-
-
-// =========================
-// AUTO SHOOT
-// =========================
-
-function getClosestEnemy(){
-
-let closest=null;
-let best=Infinity;
-
-for(const e of enemies){
-
-if(e.hp<=0)
-continue;
-
-const d=Math.hypot(
-e.x-player.x,
-e.y-player.y
-);
-
-if(d<best){
-
-best=d;
-closest=e;
-
-}
-
-}
-
-return closest;
-
-}
-
-
-function updateAutoShoot(){
-
-if(!autoShoot || aimJoy.on)
-return;
-
-const target=getClosestEnemy();
-
-if(!target)
-return;
-
-player.aimTarget=
-Math.atan2(
-target.y-player.y,
-target.x-player.x
-);
-
-player.aim=player.aimTarget;
-
-
-if(player.weapon===null){
-
-if(shoot<=0)
-fireBase();
-
-}
-
-else if(player.weapon==="fast"){
-
-if(shoot<=0&&!player.reloading)
-fireFast();
-
-}
-
-else if(player.weapon==="scatter"){
-
-if(shoot<=0)
-fireScatter();
-
-}
-
-}
-
-
-// =========================
-// FIRE BASE
-// =========================
-
-function fireBase(){
-
-if(player.weapon!==null)
-return;
-
-if(shoot>0)
-return;
-
-const a=player.aim;
-
-shots.push({
-
-x:player.x,
-y:player.y,
-
-vx:Math.cos(a)*player.bulletSpeed,
-vy:Math.sin(a)*player.bulletSpeed,
-
-r:5,
-
-life:1.5,
-
-damage:10,
-
-pierceLeft:0
-
-});
-
-shoot=player.fireRate;
-
-}
-
-
-// =========================
-// FIRE FAST
-// =========================
-
-function fireFast(){
-
-if(player.weapon!=="fast")
-return;
-
-if(player.reloading)
-return;
-
-if(player.ammo<=0){
-
-startFastReload();
-return;
-
-}
-
-
-const a=player.aim;
-
-for(
-let i=0;
-i<player.shots;
-i++
-){
-
-const aa=
-a+
-(
-i-(player.shots-1)/2
-)*.18;
-
-
-shots.push({
-
-x:player.x,
-y:player.y,
-
-vx:Math.cos(aa)*player.bulletSpeed,
-vy:Math.sin(aa)*player.bulletSpeed,
-
-r:5,
-
-life:1.5,
-
-damage:player.damage,
-
-pierceLeft:0
-
-});
-
-}
-
-
-player.ammo--;
-
-shoot=player.fireRate;
-
-
-if(player.ammo<=0){
-
-startFastReload();
-
-}
-
-}
-
-
-// =========================
-// FAST RELOAD
-// =========================
-
-function startFastReload(){
-
-player.ammo=0;
-
-player.reloading=true;
-
-player.reloadTimer=player.reloadTime;
-
-}
-
-
-// =========================
-// FIRE SCATTER
-// =========================
-
-function fireScatter(){
-
-if(player.weapon!=="scatter")
-return;
-
-if(shoot>0)
-return;
-
-const a=player.aim;
-
-const spread=.055;
-
-
-for(
-let i=0;
-i<player.shots;
-i++
-){
-
-const offset=
-(
-i-(player.shots-1)/2
-)*spread;
-
-const aa=a+offset;
-
-
-shots.push({
-
-x:player.x,
-y:player.y,
-
-vx:Math.cos(aa)*player.bulletSpeed,
-vy:Math.sin(aa)*player.bulletSpeed,
-
-r:5,
-
-life:1.5,
-
-damage:player.scatterDamage,
-
-pierceLeft:
-player.scatterPierce?1:0
-
-});
-
-}
-
-
-shoot=player.scatterFireRate;
-
-}
-
-
-// =========================
-// AIM TOUCH
-// =========================
-
-function beginAimTouch(touch){
-
-aimJoystickPos();
-
-const x=touch.clientX;
-const y=touch.clientY;
-
-const distance=
-Math.hypot(
-x-aimJoy.x,
-y-aimJoy.y
-);
-
-if(distance>aimJoy.r+30)
-return false;
-
-aimTouchId=touch.identifier;
-
-aimJoy.on=true;
-
-setAimJoystick(x,y);
-
-
-if(player.weapon===null){
-
-fireBase();
-
-}
-
-else if(
-player.weapon==="fast"&&
-!player.reloading
-){
-
-fireFast();
-
-}
-
-else if(player.weapon==="scatter"){
-
-fireScatter();
-
-}
-
-return true;
-
-}
-
-
-// =========================
-// MOVE TOUCH
-// =========================
-
-function beginMoveTouch(touch){
-
-joystickPos();
-
-const x=touch.clientX;
-const y=touch.clientY;
-
-const distance=
-Math.hypot(
-x-joy.x,
-y-joy.y
-);
-
-if(distance>joy.r+30)
-return false;
-
-moveTouchId=touch.identifier;
-
-joy.on=true;
-
-setJoystick(x,y);
-
-return true;
-
-}
-
-
-// =========================
-// TOUCH START
-// =========================
-
-c.addEventListener(
-"touchstart",
-e=>{
-
-e.preventDefault();
-
-
-// MENU
-
-if(!started){
-
-if(settingsOpen){
-
-for(const touch of e.changedTouches){
-
-if(pointInMobileDevice(
-touch.clientX,
-touch.clientY
-)){
-
-selectedDevice="mobile";
-settingsOpen=false;
-return;
-
-}
-
-if(pointInAutoShoot(
-touch.clientX,
-touch.clientY
-)){
-
-autoShoot=!autoShoot;
-return;
-
-}
-
-if(pointInSettingsBack(
-touch.clientX,
-touch.clientY
-)){
-
-settingsOpen=false;
-return;
-
-}
-
-}
-
-return;
-
-}
-
-
-if(loadoutOpen){
-
-for(const touch of e.changedTouches){
-
-if(pointInCard(
-touch.clientX,
-touch.clientY,
-0
-)){
-
-equippedWeapon="scatter";
-loadoutOpen=false;
-return;
-
-}
-
-if(pointInCard(
-touch.clientX,
-touch.clientY,
-1
-)){
-
-equippedWeapon="fast";
-loadoutOpen=false;
-return;
-
-}
-
-if(pointInBackButton(
-touch.clientX,
-touch.clientY
-)){
-
-loadoutOpen=false;
-return;
-
-}
-
-}
-
-return;
-
-}
-
-
-for(const touch of e.changedTouches){
-
-if(pointInPlay(
-touch.clientX,
-touch.clientY
-)){
-
-startGame();
-return;
-
-}
-
-if(pointInLoadoutButton(
-touch.clientX,
-touch.clientY
-)){
-
-loadoutOpen=true;
-return;
-
-}
-
-if(pointInSettingsButton(
-touch.clientX,
-touch.clientY
-)){
-
-settingsOpen=true;
-return;
-
-}
-
-}
-
-return;
-
-}
-
-
-// GAME OVER
-
-if(gameOver){
-
-reset();
-startGame();
-return;
-
-}
-
-
-// WEAPON CHOICE
-
-if(weaponChoiceOpen){
-
-for(const touch of e.changedTouches){
-
-for(let i=0;i<2;i++){
-
-if(pointInCard(
-touch.clientX,
-touch.clientY,
-i
-)){
-
-chooseWeapon(i);
-return;
-
-}
-
-}
-
-}
-
-return;
-
-}
-
-
-// UPGRADE
-
-if(upgradeOpen){
-
-for(const touch of e.changedTouches){
-
-if(pointInSingleUpgradeCard(
-touch.clientX,
-touch.clientY
-)){
-
-chooseUpgrade(0);
-return;
-
-}
-
-}
-
-return;
-
-}
-
-
-// PAUSE
-
-for(const touch of e.changedTouches){
-
-if(pointInPause(
-touch.clientX,
-touch.clientY
-)){
-
-paused=!paused;
-return;
-
-}
-
-}
-
-
-if(paused)
-return;
-
-
-// JOYSTICKS
-
-for(const touch of e.changedTouches){
-
-if(
-aimTouchId===null&&
-beginAimTouch(touch)
-){
-
-return;
-
-}
-
-if(
-moveTouchId===null&&
-beginMoveTouch(touch)
-){
-
-return;
-
-}
-
-}
-
-},
-{passive:false}
-);
-
-
-// =========================
-// TOUCH MOVE
-// =========================
-
-c.addEventListener(
-"touchmove",
-e=>{
-
-e.preventDefault();
-
-for(const touch of e.changedTouches){
-
-if(
-aimTouchId===touch.identifier
-){
-
-setAimJoystick(
-touch.clientX,
-touch.clientY
-);
-
-}
-
-if(
-moveTouchId===touch.identifier
-){
-
-setJoystick(
-touch.clientX,
-touch.clientY
-);
-
-}
-
-}
-
-},
-{passive:false}
-);
-
-
-// =========================
-// TOUCH END
-// =========================
-
-function endTouch(touch){
-
-if(
-aimTouchId===touch.identifier
-){
-
-aimTouchId=null;
-
-aimJoy.on=false;
-
-aimJoy.dx=1;
-aimJoy.dy=0;
-
-aimJoystickPos();
-
-aimJoy.tx=aimJoy.x;
-aimJoy.ty=aimJoy.y;
-
-}
-
-
-if(
-moveTouchId===touch.identifier
-){
-
-moveTouchId=null;
-
-joy.on=false;
-
-joy.dx=0;
-joy.dy=0;
-
-joystickPos();
-
-joy.tx=joy.x;
-joy.ty=joy.y;
-
-}
-
-}
-
-
-c.addEventListener(
-"touchend",
-e=>{
-
-e.preventDefault();
-
-for(const touch of e.changedTouches){
-
-endTouch(touch);
-
-}
-
-},
-{passive:false}
-);
-
-
-c.addEventListener(
-"touchcancel",
-e=>{
-
-e.preventDefault();
-
-for(const touch of e.changedTouches){
-
-endTouch(touch);
-
-}
-
-},
-{passive:false}
-);
-
-
-// =========================
-// POINTER DOWN
-// =========================
-
-c.addEventListener(
-"pointerdown",
-e=>{
-
-if(e.pointerType==="touch")
-return;
-
-e.preventDefault();
-
-
-if(!started){
-
-if(settingsOpen){
-
-if(pointInMobileDevice(
-e.clientX,
-e.clientY
-)){
-
-selectedDevice="mobile";
-settingsOpen=false;
-return;
-
-}
-
-if(pointInAutoShoot(
-e.clientX,
-e.clientY
-)){
-
-autoShoot=!autoShoot;
-return;
-
-}
-
-if(pointInSettingsBack(
-e.clientX,
-e.clientY
-)){
-
-settingsOpen=false;
-return;
-
-}
-
-return;
-
-}
-
-
-if(loadoutOpen){
-
-for(let i=0;i<2;i++){
-
-if(pointInCard(
-e.clientX,
-e.clientY,
-i
-)){
-
-equippedWeapon=
-i===0
-?"scatter"
-:"fast";
-
-loadoutOpen=false;
-
-return;
-
-}
-
-}
-
-if(pointInBackButton(
-e.clientX,
-e.clientY
-)){
-
-loadoutOpen=false;
-return;
-
-}
-
-return;
-
-}
-
-
-if(pointInPlay(
-e.clientX,
-e.clientY
-)){
-
-startGame();
-return;
-
-}
-
-if(pointInLoadoutButton(
-e.clientX,
-e.clientY
-)){
-
-loadoutOpen=true;
-return;
-
-}
-
-if(pointInSettingsButton(
-e.clientX,
-e.clientY
-)){
-
-settingsOpen=true;
-return;
-
-}
-
-return;
-
-}
-
-
-// GAME OVER
-
-if(gameOver){
-
-reset();
-startGame();
-return;
-
-}
-
-
-// WEAPON CHOICE
-
-if(weaponChoiceOpen){
-
-for(let i=0;i<2;i++){
-
-if(pointInCard(
-e.clientX,
-e.clientY,
-i
-)){
-
-chooseWeapon(i);
-return;
-
-}
-
-}
-
-return;
-
-}
-
-
-// UPGRADE
-
-if(upgradeOpen){
-
-if(pointInSingleUpgradeCard(
-e.clientX,
-e.clientY
-)){
-
-chooseUpgrade(0);
-return;
-
-}
-
-return;
-
-}
-
-
-// PAUSE
-
-if(pointInPause(
-e.clientX,
-e.clientY
-)){
-
-paused=!paused;
-return;
-
-}
-
-if(paused)
-return;
-
-
-// AIM
-
-if(
-Math.hypot(
-e.clientX-aimJoy.x,
-e.clientY-aimJoy.y
-)<=aimJoy.r+30
-){
-
-aimJoy.on=true;
-
-setAimJoystick(
-e.clientX,
-e.clientY
-);
-
-
-if(player.weapon===null)
-fireBase();
-
-else if(
-player.weapon==="fast"&&
-!player.reloading
-)
-fireFast();
-
-else if(player.weapon==="scatter")
-fireScatter();
-
-return;
-
-}
-
-
-// MOVE
-
-if(
-Math.hypot(
-e.clientX-joy.x,
-e.clientY-joy.y
-)<=joy.r+30
-){
-
-joy.on=true;
-
-setJoystick(
-e.clientX,
-e.clientY
-);
-
-}
-
-});
-
-
-// =========================
-// POINTER MOVE
-// =========================
-
-c.addEventListener(
-"pointermove",
-e=>{
-
-if(e.pointerType==="touch")
-return;
-
-if(aimJoy.on){
-
-setAimJoystick(
-e.clientX,
-e.clientY
-);
-
-}
-
-if(joy.on){
-
-setJoystick(
-e.clientX,
-e.clientY
-);
-
-}
-
-});
-
-
-// =========================
-// POINTER UP
-// =========================
-
-c.addEventListener(
-"pointerup",
-e=>{
-
-if(e.pointerType==="touch")
-return;
-
-aimJoy.on=false;
-
-aimJoy.dx=1;
-aimJoy.dy=0;
-
-joy.on=false;
-
-joy.dx=0;
-joy.dy=0;
-
-});
-
-
-// =========================
-// KEYBOARD
-// =========================
-
-addEventListener(
-"keydown",
-e=>{
-
-if(
-e.key.toLowerCase()==="p"||
-e.key==="Escape"
-){
-
-togglePause();
-
-}
-
-});
-
-
-// =========================
-// UPDATE
-// =========================
-
-function update(dt){
-
-if(
-!started||
-gameOver||
-paused||
-upgradeOpen||
-weaponChoiceOpen
-)
-return;
-
-
-// MOVEMENT
-
-if(
-Math.hypot(
-joy.dx,
-joy.dy
-)>.05
-){
-
-player.x+=joy.dx*player.speed*dt;
-player.y+=joy.dy*player.speed*dt;
-
-}
-
-
-player.x=Math.max(
-arena.left+18,
-Math.min(
-arena.right-18,
-player.x
-)
-);
-
-player.y=Math.max(
-arena.top+18,
-Math.min(
-gameBottom-18,
-player.y
-)
-);
-
-
-// AIM
-
-if(aimJoy.on){
-
-let diff=
-player.aimTarget-player.aim;
-
-while(diff>Math.PI)
-diff-=Math.PI*2;
-
-while(diff<-Math.PI)
-diff+=Math.PI*2;
-
-player.aim+=
-diff*
-Math.min(
-1,
-dt*10*player.aimSensitivity
-);
-
-}
-
-
-// WAVE BREAK
-
-if(waveBreakTimer>0){
-
-waveBreakTimer-=dt;
-
-if(waveBreakTimer<=0){
-
-startWave();
-
-}
-
-}
-
-
-// SPAWN
-
-if(
-waveBreakTimer<=0&&
-waveSpawned<waveTotal
-){
-
-waveSpawnTimer-=dt;
-
-if(waveSpawnTimer<=0){
-
-const normalCount=
-getWaveNormalCount(wave);
-
-
-if(
-isBossWave(wave)&&
-waveSpawned===normalCount
-){
-
-spawnBoss();
-
-}
-else{
-
-spawnEnemy();
-
-}
-
-waveSpawned++;
-
-waveSpawnTimer=
-getWaveSpawnSpeed(wave);
-
-}
-
-}
-
-
-// WAVE COMPLETE
-
-if(
-waveBreakTimer<=0&&
-waveSpawned===waveTotal&&
-enemies.length===0
-){
-
-completeWave();
-
-}
-
-
-// FAST RELOAD
-
-if(
-player.weapon==="fast"&&
-player.reloading
-){
-
-player.reloadTimer-=dt;
-
-if(player.reloadTimer<=0){
-
-player.reloadTimer=0;
-
-player.ammo=
-player.maxAmmo;
-
-player.reloading=false;
-
-}
-
-}
-
-
-// AUTO SHOOT
-
-updateAutoShoot();
-
-
-// FIRE TIMER
-
-shoot-=dt;
-
-
-// BASE
-
-if(
-player.weapon===null&&
-aimJoy.on&&
-shoot<=0
-){
-
-fireBase();
-
-}
-
-
-// FAST
-
-if(
-player.weapon==="fast"&&
-aimJoy.on&&
-shoot<=0&&
-!player.reloading
-){
-
-fireFast();
-
-}
-
-
-// SCATTER
-
-if(
-player.weapon==="scatter"&&
-aimJoy.on&&
-shoot<=0
-){
-
-fireScatter();
-
-}
-
-
-// =========================
-// ENEMIES
-// =========================
-
-for(const e of enemies){
-
-const a=
-Math.atan2(
-player.y-e.y,
-player.x-e.x
-);
-
-e.x+=Math.cos(a)*e.speed*dt;
-e.y+=Math.sin(a)*e.speed*dt;
-
-
-if(e.isBoss){
-
-const attackMultiplier=
-e.hp<=250?2:1;
-
-e.radialShoot-=dt;
-e.bigShoot-=dt;
-
-
-if(e.radialShoot<=0){
-
-for(let i=0;i<12;i++){
-
-const aa=
-i*(Math.PI*2/12);
-
-enemyShots.push({
-
-x:e.x,
-y:e.y,
-
-vx:Math.cos(aa)*95,
-vy:Math.sin(aa)*95,
-
-r:7,
-life:7,
-
-damage:10,
-bossShot:true
-
-});
-
-}
-
-e.radialShoot=
-5/attackMultiplier;
-
-}
-
-
-if(e.bigShoot<=0){
-
-enemyShots.push({
-
-x:e.x,
-y:e.y,
-
-vx:Math.cos(a)*55,
-vy:Math.sin(a)*55,
-
-r:14,
-life:10,
-
-damage:50,
-bigBossShot:true
-
-});
-
-e.bigShoot=
-5/attackMultiplier;
-
-}
-
-}
-else{
-
-e.shoot-=dt;
-
-if(e.shoot<=0){
-
-enemyShots.push({
-
-x:e.x,
-y:e.y,
-
-vx:Math.cos(a)*130,
-vy:Math.sin(a)*130,
-
-r:6,
-life:5,
-
-damage:15
-
-});
-
-e.shoot=2.5;
-
-}
-
-}
-
-
-if(
-Math.hypot(
-e.x-player.x,
-e.y-player.y
-)
-<
-e.r+player.r
-){
-
-player.hp-=25;
-
-e.x-=Math.cos(a)*25;
-e.y-=Math.sin(a)*25;
-
-}
-
-}
-
-
-// =========================
-// PLAYER SHOTS
-// =========================
-
-for(const s of shots){
-
-s.x+=s.vx*dt;
-s.y+=s.vy*dt;
-
-s.life-=dt;
-
-if(
-s.x<arena.left||
-s.x>arena.right||
-s.y<arena.top||
-s.y>gameBottom
-){
-
-s.life=0;
-
-}
-
-}
-
-
-// =========================
-// ENEMY SHOTS
-// =========================
-
-for(const s of enemyShots){
-
-s.x+=s.vx*dt;
-s.y+=s.vy*dt;
-
-s.life-=dt;
-
-if(
-Math.hypot(
-s.x-player.x,
-s.y-player.y
-)
-<
-s.r+player.r
-){
-
-player.hp-=
-s.damage!==undefined
-?s.damage
-:15;
-
-s.life=0;
-
-}
-
-}
-
-
-// =========================
-// COLLISIONS
-// =========================
-
-for(const s of shots){
-
-if(s.life<=0)
-continue;
-
-for(const e of enemies){
-
-if(
-e.hp>0&&
-Math.hypot(
-s.x-e.x,
-s.y-e.y
-)
-<
-s.r+e.r
-){
-
-e.hp-=s.damage;
-
-
-if(s.pierceLeft>0){
-
-s.damage*=.5;
-
-s.pierceLeft--;
-
-continue;
-
-}
-
-s.life=0;
-
-break;
-
-}
-
-}
-
-}
-
-
-// =========================
-// DEATHS
-// =========================
-
-for(const e of enemies){
-
-if(
-e.hp<=0&&
-!e.dead
-){
-
-e.dead=true;
-
-score+=e.isBoss?100:10;
-
-orbs.push({
-
-x:e.x,
-y:e.y
-
-});
-
-
-if(e.isBoss){
-
-for(let i=0;i<4;i++){
-
-orbs.push({
-
-x:e.x+
-(Math.random()-.5)*30,
-
-y:e.y+
-(Math.random()-.5)*30
-
-});
-
-}
-
-}
-
-}
-
-}
-
-
-// =========================
-// CLEANUP
-// =========================
-
-shots=shots.filter(
-s=>
-s.life>0&&
-s.x>arena.left&&
-s.x<arena.right&&
-s.y>arena.top&&
-s.y<gameBottom
-);
-
-enemyShots=enemyShots.filter(
-s=>s.life>0
-);
-
-enemies=enemies.filter(
-e=>e.hp>0
-);
-
-
-// =========================
-// XP
-// =========================
-
-for(const o of orbs){
-
-const dist=
-Math.hypot(
-o.x-player.x,
-o.y-player.y
-);
-
-const maxDistance=
-Math.hypot(W,H);
-
-const closeness=
-1-Math.min(
-1,
-dist/maxDistance
-);
-
-const speed=
-25+
-Math.pow(
-closeness,
-2
-)*475;
-
-if(dist>.1){
-
-o.x+=
-(player.x-o.x)/dist*
-speed*dt;
-
-o.y+=
-(player.y-o.y)/dist*
-speed*dt;
-
-}
-
-
-if(dist<18){
-
-o.dead=true;
-
-xp+=25;
-
-
-while(xp>=xpNext){
-
-xp-=xpNext;
-
-level++;
-
-xpNext=
-Math.floor(
-xpNext*1.25
-);
-
-
-if(level===2){
-
-if(!player.weapon){
-
-openWeaponChoice();
-
-return;
-
-}
-else{
-
-openUpgrades();
-
-return;
-
-}
-
-}
-
-
-if(level>2){
-
-openUpgrades();
-
-return;
-
-}
-
-}
-
-}
-
-}
-
-
-orbs=orbs.filter(
-o=>!o.dead
-);
-
-
-// GAME OVER
-
-if(player.hp<=0){
-
-gameOver=true;
-
-}
-
-}
-
-
-// =========================
-// WEAPON CHOICE
-// =========================
-
-function openWeaponChoice(){
-
-upgradeChoices=[];
-
-upgradeOpen=false;
-
-weaponChoiceOpen=true;
-
-paused=false;
-
-}
-
-
-function chooseWeapon(i){
-
-if(!weaponChoiceOpen)
-return;
-
-if(i===0){
-
-equipScatterBlaster();
-
-}
-else{
-
-equipFastPewPew();
-
-}
-
-weaponChoiceOpen=false;
-
-upgradeOpen=false;
-
-upgradeChoices=[];
-
-shoot=0;
-
-}
-
-
-// =========================
-// OPEN UPGRADES
-// =========================
-
-function openUpgrades(){
-
-upgradeChoices=[];
-
-upgradeOpen=false;
-
-weaponChoiceOpen=false;
-
-paused=false;
-
-
-if(player.weapon==="scatter"){
-
-const nextTier=
-player.scatterTier+1;
-
-const nextUpgrade=
-scatterTierUpgrades.find(
-u=>u.tier===nextTier
-);
-
-
-if(nextUpgrade){
-
-upgradeChoices.push(
-nextUpgrade
-);
-
-upgradeOpen=true;
-
-}
-
-return;
-
-}
-
-
-if(player.weapon==="fast"){
-
-let pool=[
-...fastPewPewUpgrades
-];
-
-while(
-upgradeChoices.length<2&&
-pool.length>0
-){
-
-const i=
-Math.floor(
-Math.random()*pool.length
-);
-
-upgradeChoices.push(
-pool[i]
-);
-
-pool.splice(i,1);
-
-}
-
-upgradeOpen=true;
-
-}
-
-}
-
-
-// =========================
-// CHOOSE UPGRADE
-// =========================
-
-function chooseUpgrade(i){
-
-if(
-!upgradeOpen||
-!upgradeChoices[i]
-)
-return;
-
-
-upgradeChoices[i].apply();
-
-shots=[];
-enemyShots=[];
-
-upgradeChoices=[];
-
-upgradeOpen=false;
-
-weaponChoiceOpen=false;
-
-paused=false;
-
-shoot=0;
-
-}
-
-
-// =========================
-// PAUSE
-// =========================
-
-function togglePause(){
-
-if(
-!started||
-gameOver||
-upgradeOpen||
-weaponChoiceOpen
-)
-return;
-
-paused=!paused;
-
-}
-
-
-// =========================
-// DRAW
-// =========================
-
-function draw(){
-
-ctx.fillStyle="#080a10";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-
-// =========================
-// MENU
-// =========================
-
-if(!started){
-
-ctx.fillStyle="#020308";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-
-if(!loadoutOpen&&!settingsOpen){
-
-ctx.save();
-
-ctx.shadowBlur=35;
-ctx.shadowColor="#42d9ff";
-
-ctx.fillStyle="#42d9ff";
-ctx.globalAlpha=.15;
-
-ctx.beginPath();
-
-ctx.arc(
-W/2,
-H/2-150,
-100,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-ctx.restore();
-
-
-ctx.fillStyle="#65e6ff";
-
-ctx.textAlign="center";
-
-ctx.font=
-"bold "+
-Math.min(48,W/9)+
-"px system-ui";
-
-ctx.fillText(
-"BULLETBOUND",
-W/2,
-H/2-105
-);
-
-
-ctx.fillStyle="#7d8799";
-
-ctx.font="13px system-ui";
-
-ctx.fillText(
-"Survive. Adapt. Become stronger.",
-W/2,
-H/2-70
-);
-
-
-// PLAY
-
-const bw=Math.min(300,W-50);
-const bh=60;
-
-const bx=(W-bw)/2;
-const by=H/2-15;
-
-ctx.fillStyle="#182130";
-
-ctx.fillRect(
-bx,
-by,
-bw,
-bh
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.lineWidth=3;
-
-ctx.strokeRect(
-bx,
-by,
-bw,
-bh
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 21px system-ui";
-
-ctx.fillText(
-"PLAY",
-W/2,
-by+39
-);
-
-
-// WEAPONS
-
-const wh=Math.min(300,W-50);
-const whh=52;
-
-const wx=(W-wh)/2;
-const wy=H/2+58;
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-wx,
-wy,
-wh,
-whh
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-wx,
-wy,
-wh,
-whh
-);
-
-ctx.fillStyle="#d9e2f0";
-
-ctx.font="bold 16px system-ui";
-
-ctx.fillText(
-"WEAPONS",
-W/2,
-wy+33
-);
-
-
-// SETTINGS
-
-const sw=Math.min(300,W-50);
-const sh=52;
-
-const sx=(W-sw)/2;
-const sy=H/2+120;
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-sx,
-sy,
-sw,
-sh
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.strokeRect(
-sx,
-sy,
-sw,
-sh
-);
-
-ctx.fillStyle="#d9e2f0";
-
-ctx.font="bold 16px system-ui";
-
-ctx.fillText(
-"SETTINGS",
-W/2,
-sy+33
-);
-
-
-// EQUIPPED
-
-ctx.fillStyle="#7d8799";
-
-ctx.font="10px system-ui";
-
-let equippedText=
-"EQUIPPED: NONE";
-
-if(equippedWeapon==="scatter")
-equippedText=
-"EQUIPPED: SCATTER BLASTER";
-
-if(equippedWeapon==="fast")
-equippedText=
-"EQUIPPED: FAST PEW PEW";
-
-ctx.fillText(
-equippedText,
-W/2,
-wy+70
-);
-
-
-ctx.fillStyle="#394355";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"Bulletbound",
-W/2,
-H-25
-);
-
-}
-
-
-// =========================
-// SETTINGS
-// =========================
-
-if(settingsOpen){
-
-ctx.fillStyle="#080a10";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-
-const panelW=
-Math.min(560,W-28);
-
-const panelH=
-Math.min(430,H-30);
-
-const panelX=
-(W-panelW)/2;
-
-const panelY=
-(H-panelH)/2;
-
-
-ctx.fillStyle="#111827";
-
-ctx.fillRect(
-panelX,
-panelY,
-panelW,
-panelH
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.lineWidth=3;
-
-ctx.strokeRect(
-panelX,
-panelY,
-panelW,
-panelH
-);
-
-
-ctx.fillStyle="#65e6ff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 27px system-ui";
-
-ctx.fillText(
-"SETTINGS",
-W/2,
-panelY+42
-);
-
-
-// DEVICE
-
-const gap=12;
-
-const deviceW=
-Math.min(
-190,
-W-44-gap
-);
-
-const deviceH=70;
-
-const deviceTotal=
-deviceW+gap;
-
-const deviceX=
-(W-deviceTotal)/2;
-
-const deviceY=
-panelY+65;
-
-
-ctx.fillStyle="#1c3040";
-
-ctx.fillRect(
-deviceX,
-deviceY,
-deviceW,
-deviceH
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-deviceX,
-deviceY,
-deviceW,
-deviceH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 19px system-ui";
-
-ctx.fillText(
-"📱 MOBILE",
-deviceX+deviceW/2,
-deviceY+43
-);
-
-
-// FUTURE COMPUTER
-
-ctx.strokeStyle="#263244";
-
-ctx.strokeRect(
-deviceX+deviceW+gap,
-deviceY,
-deviceW,
-deviceH
-);
-
-ctx.fillStyle="#394355";
-
-ctx.font="12px system-ui";
-
-ctx.fillText(
-"COMPUTER",
-deviceX+
-deviceW+
-gap+
-deviceW/2,
-deviceY+40
-);
-
-
-// AUTO SHOOT
-
-const autoW=
-Math.min(300,W-50);
-
-const autoH=54;
-
-const autoX=
-(W-autoW)/2;
-
-const autoY=
-deviceY+105;
-
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-autoX,
-autoY,
-autoW,
-autoH
-);
-
-ctx.strokeStyle=
-autoShoot
-?"#65e6ff"
-:"#394355";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-autoX,
-autoY,
-autoW,
-autoH
-);
-
-
-ctx.fillStyle="#d9e2f0";
-
-ctx.font="bold 15px system-ui";
-
-ctx.fillText(
-"AUTO SHOOT",
-autoX+autoW*.30,
-autoY+34
-);
-
-ctx.fillStyle=
-autoShoot
-?"#55e685"
-:"#7d8799";
-
-ctx.fillText(
-autoShoot
-?"ON"
-:"OFF",
-autoX+autoW*.76,
-autoY+34
-);
-
-
-ctx.fillStyle="#7d8799";
-
-ctx.font="11px system-ui";
-
-ctx.fillText(
-"Automatically targets and fires at the closest enemy.",
-W/2,
-autoY+78
-);
-
-
-// BACK
-
-const backW=
-Math.min(180,W-50);
-
-const backH=50;
-
-const backX=
-(W-backW)/2;
-
-const backY=
-H-75;
-
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-backX,
-backY,
-backW,
-backH
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.strokeRect(
-backX,
-backY,
-backW,
-backH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 16px system-ui";
-
-ctx.fillText(
-"BACK",
-W/2,
-backY+32
-);
-
-ctx.textAlign="left";
-
-return;
-
-}
-
-
-// =========================
-// LOADOUT
-// =========================
-
-if(loadoutOpen){
-
-ctx.fillStyle="#080a10";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-
-ctx.fillStyle="#65e6ff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 25px system-ui";
-
-ctx.fillText(
-"CHOOSE STARTING WEAPON",
-W/2,
-H/2-120
-);
-
-
-const gap=12;
-
-const cardW=
-Math.min(
-(W-36-gap)/2,
-190
-);
-
-const cardH=175;
-
-const startX=
-(W-(cardW*2+gap))/2;
-
-const cardY=
-H/2-85;
-
-
-// SCATTER
-
-ctx.fillStyle=
-equippedWeapon==="scatter"
-?"#1c3040"
-:"#121a28";
-
-ctx.fillRect(
-startX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle=
-equippedWeapon==="scatter"
-?"#65e6ff"
-:"#394355";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-startX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 14px system-ui";
-
-ctx.fillText(
-"SCATTER BLASTER",
-startX+cardW/2,
-cardY+32
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"20 damage",
-startX+cardW/2,
-cardY+65
-);
-
-ctx.fillText(
-"1.5s cooldown",
-startX+cardW/2,
-cardY+83
-);
-
-ctx.fillText(
-"No ammo or reload",
-startX+cardW/2,
-cardY+101
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-equippedWeapon==="scatter"
-?"EQUIPPED"
-:"EQUIP",
-startX+cardW/2,
-cardY+143
-);
-
-
-// FAST
-
-const fastX=
-startX+cardW+gap;
-
-ctx.fillStyle=
-equippedWeapon==="fast"
-?"#1c3040"
-:"#121a28";
-
-ctx.fillRect(
-fastX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle=
-equippedWeapon==="fast"
-?"#65e6ff"
-:"#394355";
-
-ctx.strokeRect(
-fastX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 14px system-ui";
-
-ctx.fillText(
-"FAST PEW PEW",
-fastX+cardW/2,
-cardY+32
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"Fast automatic rifle",
-fastX+cardW/2,
-cardY+65
-);
-
-ctx.fillText(
-"10 damage",
-fastX+cardW/2,
-cardY+83
-);
-
-ctx.fillText(
-"Ammo based",
-fastX+cardW/2,
-cardY+101
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-equippedWeapon==="fast"
-?"EQUIPPED"
-:"EQUIP",
-fastX+cardW/2,
-cardY+143
-);
-
-
-// BACK
-
-const backW=
-Math.min(180,W-50);
-
-const backH=50;
-
-const backX=
-(W-backW)/2;
-
-const backY=
-H-75;
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-backX,
-backY,
-backW,
-backH
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.strokeRect(
-backX,
-backY,
-backW,
-backH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 16px system-ui";
-
-ctx.fillText(
-"BACK",
-W/2,
-backY+32
-);
-
-ctx.textAlign="left";
-
-return;
-
-}
-
-
-// =========================
-// ARENA
-// =========================
-
-ctx.fillStyle="#05070b";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-
-// GAME AREA
-
-ctx.fillStyle="#0b0f17";
-
-ctx.fillRect(
-arena.left,
-arena.top,
-arena.right-arena.left,
-gameBottom-arena.top
-);
-
-
-// GRID
-
-ctx.strokeStyle="#111925";
-
-ctx.lineWidth=1;
-
-const grid=40;
-
-
-for(
-let x=arena.left;
-x<=arena.right;
-x+=grid
-){
-
-ctx.beginPath();
-
-ctx.moveTo(x,arena.top);
-ctx.lineTo(x,gameBottom);
-
-ctx.stroke();
-
-}
-
-
-for(
-let y=arena.top;
-y<=gameBottom;
-y+=grid
-){
-
-ctx.beginPath();
-
-ctx.moveTo(arena.left,y);
-ctx.lineTo(arena.right,y);
-
-ctx.stroke();
-
-}
-
-
-// BORDER
-
-ctx.strokeStyle="#263244";
-
-ctx.lineWidth=3;
-
-ctx.strokeRect(
-arena.left,
-arena.top,
-arena.right-arena.left,
-gameBottom-arena.top
-);
-
-
-// =========================
-// CONTROL STRIP
-// =========================
-
-ctx.fillStyle="#080a10";
-
-ctx.fillRect(
-0,
-controlTop,
-W,
-H-controlTop
-);
-
-ctx.strokeStyle="#263244";
-
-ctx.lineWidth=2;
-
-ctx.beginPath();
-
-ctx.moveTo(
-0,
-controlTop
-);
-
-ctx.lineTo(
-W,
-controlTop
-);
-
-ctx.stroke();
-
-
-// =========================
-// TOP UI
-// =========================
-
-ctx.fillStyle="#dce6f5";
-
-ctx.textAlign="left";
-
-ctx.font="bold 13px system-ui";
-
-ctx.fillText(
-"WAVE "+wave,
-24,
-25
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="11px system-ui";
-
-ctx.fillText(
-"SCORE "+score,
-24,
-43
-);
-
-
-if(isBossWave(wave)){
-
-ctx.fillStyle="#ff4f70";
-
-ctx.font="bold 10px system-ui";
-
-ctx.fillText(
-"BOSS WAVE",
-24,
-60
-);
-
-}
-
-
-// HP
-
-const hpW=
-Math.min(
-180,
-W*.42
-);
-
-const hpX=24;
-const hpY=68;
-
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="bold 9px system-ui";
-
-ctx.fillText(
-"HP "+Math.ceil(
-Math.max(0,player.hp)
-)+" / "+player.maxHp,
-hpX,
-hpY-3
-);
-
-ctx.fillStyle="#222936";
-
-ctx.fillRect(
-hpX,
-hpY,
-hpW,
-6
-);
-
-ctx.fillStyle="#55e685";
-
-ctx.fillRect(
-hpX,
-hpY,
-hpW*
-Math.max(
-0,
-player.hp/player.maxHp
-),
-6
-);
-
-
-// XP
-
-const xpW=
-Math.min(
-180,
-W*.42
-);
-
-const xpX=
-W-xpW-24;
-
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.textAlign="right";
-
-ctx.font="bold 9px system-ui";
-
-ctx.fillText(
-"XP "+Math.floor(xp)+" / "+xpNext,
-xpX+xpW,
-hpY-3
-);
-
-ctx.fillStyle="#222936";
-
-ctx.fillRect(
-xpX,
-hpY,
-xpW,
-6
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.fillRect(
-xpX,
-hpY,
-xpW*
-Math.max(
-0,
-xp/xpNext
-),
-6
-);
-
-
-ctx.fillStyle="#dce6f5";
-
-ctx.font="bold 12px system-ui";
-
-ctx.fillText(
-"LV "+level,
-W-24,
-25
-);
-
-
-// =========================
-// WEAPON UI
-// =========================
-
-ctx.textAlign="left";
-
-if(player.weapon==="scatter"){
-
-ctx.fillStyle="#ffdf4d";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-"SCATTER BLASTER",
-24,
-94
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"TIER "+
-player.scatterTier+
-" • "+
-player.shots+
-" SHOTS • "+
-player.scatterDamage+
-" DMG",
-24,
-108
-);
-
-if(player.scatterPierce){
-
-ctx.fillStyle="#65e6ff";
-
-ctx.fillText(
-"PIERCES 1 ENEMY",
-24,
-122
-);
-
-}
-
-}
-
-
-else if(player.weapon==="fast"){
-
-ctx.fillStyle="#ffdf4d";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-"AMMO "+
-player.ammo+
-" / "+
-player.maxAmmo,
-24,
-94
-);
-
-if(player.reloading){
-
-ctx.fillStyle="#ffdf4d";
-
-ctx.fillText(
-"RELOADING...",
-24,
-108
-);
-
-}
-
-}
-
-
-// =========================
-// ORBS
-// =========================
-
-for(const o of orbs){
-
-ctx.fillStyle="#65e6ff";
-
-ctx.beginPath();
-
-ctx.arc(
-o.x,
-o.y,
-6,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-}
-
-
-// =========================
-// ENEMY SHOTS
-// =========================
-
-for(const s of enemyShots){
-
-ctx.fillStyle=
-s.bigBossShot
-?"#ff4f70"
-:"#ffb347";
-
-ctx.beginPath();
-
-ctx.arc(
-s.x,
-s.y,
-s.r,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-if(s.bigBossShot){
-
-ctx.strokeStyle="#fff";
-
-ctx.lineWidth=2;
-
-ctx.stroke();
-
-}
-
-}
-
-
-// =========================
-// PLAYER SHOTS
-// =========================
-
-for(const s of shots){
-
-ctx.fillStyle="#fff";
-
-ctx.beginPath();
-
-ctx.arc(
-s.x,
-s.y,
-s.r,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-}
-
-
-// =========================
-// ENEMIES
-// =========================
-
-for(const e of enemies){
-
-if(e.isBoss){
-
-ctx.fillStyle=e.color;
-
-ctx.fillRect(
-e.x-e.r,
-e.y-e.r,
-e.r*2,
-e.r*2
-);
-
-
-// FACE
-
-ctx.fillStyle="#111";
-
-ctx.lineWidth=6;
-ctx.strokeStyle="#111";
-
-
-ctx.beginPath();
-
-ctx.moveTo(
-e.x-30,
-e.y-22
-);
-
-ctx.lineTo(
-e.x-7,
-e.y-12
-);
-
-ctx.stroke();
-
-
-ctx.beginPath();
-
-ctx.moveTo(
-e.x+30,
-e.y-22
-);
-
-ctx.lineTo(
-e.x+7,
-e.y-12
-);
-
-ctx.stroke();
-
-
-ctx.beginPath();
-
-ctx.arc(
-e.x-18,
-e.y-2,
-8,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-ctx.beginPath();
-
-ctx.arc(
-e.x+18,
-e.y-2,
-8,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-ctx.beginPath();
-
-ctx.moveTo(
-e.x-27,
-e.y+22
-);
-
-ctx.lineTo(
-e.x,
-e.y+10
-);
-
-ctx.lineTo(
-e.x+27,
-e.y+22
-);
-
-ctx.lineTo(
-e.x+20,
-e.y+30
-);
-
-ctx.lineTo(
-e.x,
-e.y+20
-);
-
-ctx.lineTo(
-e.x-20,
-e.y+30
-);
-
-ctx.closePath();
-
-ctx.fill();
-
-
-// BOSS HP
-
-const bw=110;
-const bh=7;
-
-const bx=e.x-bw/2;
-const by=e.y-e.r-15;
-
-
-ctx.fillStyle="#222936";
-
-ctx.fillRect(
-bx,
-by,
-bw,
-bh
-);
-
-ctx.fillStyle="#ff4f70";
-
-ctx.fillRect(
-bx,
-by,
-bw*Math.max(
-0,
-e.hp/e.maxHp
-),
-bh
-);
-
-}
-else{
-
-ctx.fillStyle=e.color;
-
-ctx.fillRect(
-e.x-e.r,
-e.y-e.r,
-e.r*2,
-e.r*2
-);
-
-
-ctx.fillStyle="#111";
-
-ctx.beginPath();
-
-ctx.arc(
-e.x-5,
-e.y-3,
-2.5,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-ctx.beginPath();
-
-ctx.arc(
-e.x+5,
-e.y-3,
-2.5,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-}
-
-}
-
-
-// =========================
-// PLAYER
-// =========================
-
-ctx.fillStyle="#42d9ff";
-
-ctx.beginPath();
-
-ctx.arc(
-player.x,
-player.y,
-player.r,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-ctx.save();
-
-ctx.translate(
-player.x,
-player.y
-);
-
-ctx.rotate(
-player.aim
-);
-
-ctx.fillStyle="#fff";
-
-ctx.beginPath();
-
-ctx.moveTo(18,0);
-
-ctx.lineTo(5,-6);
-
-ctx.lineTo(5,6);
-
-ctx.closePath();
-
-ctx.fill();
-
-ctx.restore();
-
-
-// =========================
-// PAUSE
-// =========================
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-W-104,
-10,
-90,
-32
-);
-
-ctx.strokeStyle="#394355";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-W-104,
-10,
-90,
-32
-);
-
-ctx.fillStyle="#fff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 12px system-ui";
-
-ctx.fillText(
-paused
-?"RESUME"
-:"PAUSE",
-W-59,
-31
-);
-
-
-// =========================
-// JOYSTICKS
-// =========================
-
-joystickPos();
-aimJoystickPos();
-
-
-ctx.globalAlpha=
-joy.on?.35:.2;
-
-ctx.fillStyle="#65e6ff";
-
-ctx.beginPath();
-
-ctx.arc(
-joy.x,
-joy.y,
-joy.r,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-ctx.globalAlpha=1;
-
-ctx.fillStyle="#65e6ff";
-
-ctx.beginPath();
-
-ctx.arc(
-joy.on?joy.tx:joy.x,
-joy.on?joy.ty:joy.y,
-joy.knobR,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-ctx.globalAlpha=
-aimJoy.on?.35:.2;
-
-ctx.fillStyle="#ffdf4d";
-
-ctx.beginPath();
-
-ctx.arc(
-aimJoy.x,
-aimJoy.y,
-aimJoy.r,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-ctx.globalAlpha=1;
-
-ctx.fillStyle="#ffdf4d";
-
-ctx.beginPath();
-
-ctx.arc(
-aimJoy.on?aimJoy.tx:aimJoy.x,
-aimJoy.on?aimJoy.ty:aimJoy.y,
-aimJoy.knobR,
-0,
-Math.PI*2
-);
-
-ctx.fill();
-
-
-// =========================
-// WEAPON CHOICE
-// =========================
-
-if(weaponChoiceOpen){
-
-ctx.fillStyle="rgba(0,0,0,.78)";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-ctx.fillStyle="#fff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 25px system-ui";
-
-ctx.fillText(
-"CHOOSE YOUR WEAPON",
-W/2,
-H/2-120
-);
-
-
-const gap=12;
-
-const cardW=
-Math.min(
-(W-36-gap)/2,
-190
-);
-
-const cardH=175;
-
-const totalW=
-cardW*2+gap;
-
-const startX=
-(W-totalW)/2;
-
-const cardY=
-H/2-85;
-
-
-// SCATTER
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-startX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-startX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 14px system-ui";
-
-ctx.fillText(
-"SCATTER BLASTER",
-startX+cardW/2,
-cardY+32
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"20 damage",
-startX+cardW/2,
-cardY+65
-);
-
-ctx.fillText(
-"1.5s cooldown",
-startX+cardW/2,
-cardY+83
-);
-
-ctx.fillText(
-"No ammo or reload",
-startX+cardW/2,
-cardY+101
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-"SELECT",
-startX+cardW/2,
-cardY+143
-);
-
-
-// FAST
-
-const fastX=
-startX+cardW+gap;
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-fastX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.strokeRect(
-fastX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 14px system-ui";
-
-ctx.fillText(
-"FAST PEW PEW",
-fastX+cardW/2,
-cardY+32
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-ctx.fillText(
-"Fast automatic rifle",
-fastX+cardW/2,
-cardY+65
-);
-
-ctx.fillText(
-"10 damage",
-fastX+cardW/2,
-cardY+83
-);
-
-ctx.fillText(
-"Ammo based",
-fastX+cardW/2,
-cardY+101
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-"SELECT",
-fastX+cardW/2,
-cardY+143
-);
-
-}
-
-
-// =========================
-// UPGRADE OVERLAY
-// =========================
-
-if(upgradeOpen){
-
-ctx.fillStyle="rgba(0,0,0,.78)";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-ctx.fillStyle="#65e6ff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 25px system-ui";
-
-ctx.fillText(
-"CHOOSE AN UPGRADE",
-W/2,
-H/2-125
-);
-
-
-// SCATTER
-
-if(
-player.weapon==="scatter"&&
-upgradeChoices[0]
-){
-
-const u=
-upgradeChoices[0];
-
-const cardW=
-Math.min(
-360,
-W-40
-);
-
-const cardH=190;
-
-const cardX=
-(W-cardW)/2;
-
-const cardY=
-H/2-85;
-
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-cardX,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.lineWidth=3;
-
-ctx.strokeRect(
-cardX,
-cardY,
-cardW,
-cardH
-);
-
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 18px system-ui";
-
-ctx.fillText(
-u.name,
-W/2,
-cardY+50
-);
-
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="12px system-ui";
-
-
-const words=
-u.desc.split(" ");
-
-let line="";
-let lines=[];
-
-
-for(const word of words){
-
-const test=
-line
-?line+" "+word
-:word;
-
-if(
-ctx.measureText(test).width>
-cardW-40
-){
-
-lines.push(line);
-
-line=word;
-
-}
-else{
-
-line=test;
-
-}
-
-}
-
-
-if(line)
-lines.push(line);
-
-
-for(
-let j=0;
-j<lines.length;
-j++
-){
-
-ctx.fillText(
-lines[j],
-W/2,
-cardY+82+j*19
-);
-
-}
-
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 12px system-ui";
-
-ctx.fillText(
-"SELECT",
-W/2,
-cardY+160
-);
-
-}
-
-
-// FAST
-
-else{
-
-const gap=12;
-
-const cardW=
-Math.min(
-(W-36-gap)/2,
-190
-);
-
-const cardH=175;
-
-const totalW=
-cardW*2+gap;
-
-const startX=
-(W-totalW)/2;
-
-const cardY=
-H/2-85;
-
-
-for(
-let i=0;
-i<2;
-i++
-){
-
-const u=
-upgradeChoices[i];
-
-if(!u)
-continue;
-
-const xx=
-startX+
-i*(cardW+gap);
-
-
-ctx.fillStyle="#121a28";
-
-ctx.fillRect(
-xx,
-cardY,
-cardW,
-cardH
-);
-
-ctx.strokeStyle="#65e6ff";
-
-ctx.lineWidth=2;
-
-ctx.strokeRect(
-xx,
-cardY,
-cardW,
-cardH
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 13px system-ui";
-
-ctx.fillText(
-u.name,
-xx+cardW/2,
-cardY+40
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="10px system-ui";
-
-
-// Wrap description
-
-const words=
-u.desc.split(" ");
-
-let line="";
-let lines=[];
-
-for(const word of words){
-
-const test=
-line
-?line+" "+word
-:word;
-
-if(
-ctx.measureText(test).width>
-cardW-20
-){
-
-lines.push(line);
-
-line=word;
-
-}
-else{
-
-line=test;
-
-}
-
-}
-
-if(line)
-lines.push(line);
-
-
-for(
-let j=0;
-j<lines.length;
-j++
-){
-
-ctx.fillText(
-lines[j],
-xx+cardW/2,
-cardY+72+j*16
-);
-
-}
-
-
-ctx.fillStyle="#65e6ff";
-
-ctx.font="bold 11px system-ui";
-
-ctx.fillText(
-"SELECT",
-xx+cardW/2,
-cardY+145
-);
-
-}
-
-}
-
-}
-
-
-// =========================
-// PAUSED
-// =========================
-
-if(
-paused&&
-!upgradeOpen&&
-!weaponChoiceOpen
-){
-
-ctx.fillStyle="rgba(0,0,0,.55)";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-ctx.fillStyle="#fff";
-
-ctx.textAlign="center";
-
-ctx.font="bold 30px system-ui";
-
-ctx.fillText(
-"PAUSED",
-W/2,
-H/2
-);
-
-}
-
-
-// =========================
-// GAME OVER
-// =========================
-
-if(gameOver){
-
-ctx.fillStyle="rgba(0,0,0,.8)";
-
-ctx.fillRect(
-0,
-0,
-W,
-H
-);
-
-ctx.fillStyle="#ff4f70";
-
-ctx.textAlign="center";
-
-ctx.font="bold 35px system-ui";
-
-ctx.fillText(
-"GAME OVER",
-W/2,
-H/2-45
-);
-
-ctx.fillStyle="#fff";
-
-ctx.font="bold 17px system-ui";
-
-ctx.fillText(
-"SCORE "+score,
-W/2,
-H/2
-);
-
-ctx.fillStyle="#9aa6b8";
-
-ctx.font="13px system-ui";
-
-ctx.fillText(
-"Tap to restart",
-W/2,
-H/2+45
-);
-
-}
-
-
-ctx.textAlign="left";
-
-}
-
-
-// =========================
-// GAME LOOP
-// =========================
-
-function loop(t){
-
-const dt=
-Math.min(
-.033,
-(t-last)/1000||0
-);
-
-last=t;
-
-update(dt);
-
-draw();
-
-requestAnimationFrame(loop);
-
+  const controlHeight=Math.min(
+    185,
+    Math.max(150,H*.23)
+  );
+
+  controlTop=H-controlHeight;
+
+  arena.left=14;
+  arena.right=W-14;
+  arena.top=72;
+  arena.bottom=controlTop;
+
+  gameBottom=controlTop-8;
 }
 
 resize();
 
+
+/* =========================
+   GAME STATE
+========================= */
+
+let screen="menu";
+
+let paused=false;
+let gameOver=false;
+
+let wave=1;
+let waveTimer=0;
+let waveDelay=2;
+
+let score=0;
+
+let level=1;
+let xp=0;
+let xpNeed=8;
+
+let upgradeOpen=false;
+let weaponChoiceOpen=false;
+
+let selectedDevice="mobile";
+
+let autoShoot=true;
+
+
+/* =========================
+   PLAYER
+========================= */
+
+const player={
+  x:0,
+  y:0,
+  r:13,
+
+  speed:175,
+
+  hp:100,
+  maxHp:100,
+
+  damage:12,
+  fireCooldown:.32,
+  fireTimer:0,
+
+  bulletSpeed:390,
+
+  weapon:"base",
+
+  ammo:6,
+  maxAmmo:6,
+
+  reloadTime:1.25,
+  reloadTimer:0,
+  reloading:false,
+
+  aimX:1,
+  aimY:0
+};
+
+
+/* =========================
+   WEAPONS
+========================= */
+
+const weapons={
+  base:{
+    name:"Base Weapon",
+    desc:"Reliable automatic fire.",
+    damage:12,
+    cooldown:.32,
+    speed:390,
+    ammo:6,
+    reload:1.25
+  },
+
+  scatter:{
+    name:"Scatter Blaster",
+    desc:"Fires multiple bullets at once.",
+    damage:8,
+    cooldown:.55,
+    speed:360,
+    ammo:5,
+    reload:1.45,
+    tier:1,
+    pierce:false
+  },
+
+  fast:{
+    name:"Fast Pew Pew",
+    desc:"Very fast firing with low damage.",
+    damage:5,
+    cooldown:.12,
+    speed:460,
+    ammo:18,
+    reload:1.5
+  }
+};
+
+
+/* =========================
+   FAST UPGRADES
+========================= */
+
+const fastUpgrades=[
+  {
+    name:"Pew Pew Power",
+    desc:"+3 bullet damage.",
+    apply(){
+      player.damage+=3;
+    }
+  },
+
+  {
+    name:"Rapid Fire",
+    desc:"Fire 15% faster.",
+    apply(){
+      player.fireCooldown*=.85;
+    }
+  },
+
+  {
+    name:"Velocity Boost",
+    desc:"+55 bullet speed.",
+    apply(){
+      player.bulletSpeed+=55;
+    }
+  },
+
+  {
+    name:"Ammo Capacity",
+    desc:"+4 maximum ammo.",
+    apply(){
+      player.maxAmmo+=4;
+      player.ammo=player.maxAmmo;
+    }
+  },
+
+  {
+    name:"Quick Reload",
+    desc:"Reload 20% faster.",
+    apply(){
+      player.reloadTime*=.8;
+    }
+  }
+];
+
+
+/* =========================
+   ARRAYS
+========================= */
+
+const enemies=[];
+const bullets=[];
+const enemyBullets=[];
+const xpOrbs=[];
+
+
+/* =========================
+   RESET
+========================= */
+
+function applyEquippedWeapon(){
+  const w=weapons[player.weapon];
+
+  player.damage=w.damage;
+  player.fireCooldown=w.cooldown;
+  player.bulletSpeed=w.speed;
+  player.maxAmmo=w.ammo;
+  player.ammo=w.ammo;
+  player.reloadTime=w.reload;
+  player.fireTimer=0;
+  player.reloadTimer=0;
+  player.reloading=false;
+
+  if(player.weapon==="scatter"){
+    player.scatterTier=w.tier||1;
+  }
+}
+
+function reset(){
+  enemies.length=0;
+  bullets.length=0;
+  enemyBullets.length=0;
+  xpOrbs.length=0;
+
+  wave=1;
+  waveTimer=0;
+  score=0;
+
+  level=1;
+  xp=0;
+  xpNeed=8;
+
+  upgradeOpen=false;
+  weaponChoiceOpen=false;
+
+  gameOver=false;
+  paused=false;
+
+  player.x=W/2;
+  player.y=Math.min(
+    arena.bottom-70,
+    arena.top+(arena.bottom-arena.top)/2
+  );
+
+  player.hp=player.maxHp;
+
+  applyEquippedWeapon();
+}
+
+
+/* =========================
+   START
+========================= */
+
+function startGame(){
+  screen="game";
+  reset();
+}
+
+
+/* =========================
+   ENEMIES
+========================= */
+
+function spawnEnemy(){
+  const side=Math.floor(Math.random()*4);
+
+  let x,y;
+
+  if(side===0){
+    x=arena.left+Math.random()*(arena.right-arena.left);
+    y=arena.top-20;
+  }else if(side===1){
+    x=arena.right+20;
+    y=arena.top+Math.random()*(gameBottom-arena.top);
+  }else if(side===2){
+    x=arena.left+Math.random()*(arena.right-arena.left);
+    y=gameBottom+20;
+  }else{
+    x=arena.left-20;
+    y=arena.top+Math.random()*(gameBottom-arena.top);
+  }
+
+  enemies.push({
+    x,
+    y,
+    r:12,
+    hp:25+wave*4,
+    maxHp:25+wave*4,
+    speed:35+wave*1.5,
+    boss:false
+  });
+}
+
+function spawnBoss(){
+  const side=Math.floor(Math.random()*4);
+
+  let x,y;
+
+  if(side===0){
+    x=W/2;
+    y=arena.top-45;
+  }else if(side===1){
+    x=arena.right+45;
+    y=(arena.top+gameBottom)/2;
+  }else if(side===2){
+    x=W/2;
+    y=gameBottom+45;
+  }else{
+    x=arena.left-45;
+    y=(arena.top+gameBottom)/2;
+  }
+
+  const hp=500+wave*100;
+
+  enemies.push({
+    x,
+    y,
+    r:28,
+    hp,
+    maxHp:hp,
+    speed:20+wave*.5,
+    boss:true,
+    shootTimer:2
+  });
+}
+
+
+/* =========================
+   JOYSTICKS
+========================= */
+
+const joy={
+  x:0,
+  y:0,
+  baseX:0,
+  baseY:0,
+  dx:0,
+  dy:0,
+  on:false,
+  id:null,
+  r:58
+};
+
+const aimJoy={
+  x:0,
+  y:0,
+  baseX:0,
+  baseY:0,
+  dx:0,
+  dy:0,
+  on:false,
+  id:null,
+  r:58
+};
+
+function updateJoystickPositions(){
+  const controlY=controlTop+(H-controlTop)/2;
+  const side=Math.min(78,W*.20);
+
+  joy.x=side;
+  joy.y=controlY;
+
+  aimJoy.x=W-side;
+  aimJoy.y=controlY;
+}
+
+updateJoystickPositions();
+
+function setJoystick(j,x,y){
+  const dx=x-j.x;
+  const dy=y-j.y;
+
+  const dist=Math.hypot(dx,dy);
+
+  const max=j.r;
+
+  if(dist>max){
+    j.dx=dx/dist;
+    j.dy=dy/dist;
+  }else{
+    j.dx=dx/max;
+    j.dy=dy/max;
+  }
+}
+
+function releaseJoystick(id){
+  if(joy.id===id){
+    joy.on=false;
+    joy.id=null;
+    joy.dx=0;
+    joy.dy=0;
+  }
+
+  if(aimJoy.id===id){
+    aimJoy.on=false;
+    aimJoy.id=null;
+    aimJoy.dx=0;
+    aimJoy.dy=0;
+  }
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+function pauseRect(){
+  return {
+    x:W-58,
+    y:14,
+    w:44,
+    h:44
+  };
+}
+
+function pointInRect(x,y,r){
+  return (
+    x>=r.x &&
+    x<=r.x+r.w &&
+    y>=r.y &&
+    y<=r.y+r.h
+  );
+}
+
+
+/* =========================
+   TOUCH
+========================= */
+
+canvas.addEventListener("touchstart",e=>{
+  e.preventDefault();
+
+  for(const t of e.changedTouches){
+    const x=t.clientX;
+    const y=t.clientY;
+
+    if(screen==="menu"){
+      handleMenuTouch(x,y);
+      continue;
+    }
+
+    if(screen==="settings"){
+      handleSettingsTouch(x,y);
+      continue;
+    }
+
+    if(screen==="weapons"){
+      handleWeaponTouch(x,y);
+      continue;
+    }
+
+    if(screen==="gameover"){
+      reset();
+      screen="game";
+      continue;
+    }
+
+    if(upgradeOpen){
+      for(let i=0;i<upgradeChoices.length;i++){
+        if(pointInUpgradeCard(x,y,i)){
+          chooseUpgrade(i);
+          break;
+        }
+      }
+      continue;
+    }
+
+    if(weaponChoiceOpen){
+      for(let i=0;i<weaponChoices.length;i++){
+        if(pointInWeaponCard(x,y,i)){
+          chooseWeapon(i);
+          break;
+        }
+      }
+      continue;
+    }
+
+    if(pointInRect(x,y,pauseRect())){
+      paused=!paused;
+      continue;
+    }
+
+    const distL=Math.hypot(x-joy.x,y-joy.y);
+    const distR=Math.hypot(x-aimJoy.x,y-aimJoy.y);
+
+    if(distL<joy.r*1.45){
+      joy.on=true;
+      joy.id=t.identifier;
+      setJoystick(joy,x,y);
+    }else if(distR<aimJoy.r*1.45){
+      aimJoy.on=true;
+      aimJoy.id=t.identifier;
+      setJoystick(aimJoy,x,y);
+    }
+  }
+},{passive:false});
+
+
+canvas.addEventListener("touchmove",e=>{
+  e.preventDefault();
+
+  for(const t of e.changedTouches){
+    if(joy.id===t.identifier){
+      setJoystick(joy,t.clientX,t.clientY);
+    }
+
+    if(aimJoy.id===t.identifier){
+      setJoystick(aimJoy,t.clientX,t.clientY);
+    }
+  }
+},{passive:false});
+
+
+canvas.addEventListener("touchend",e=>{
+  e.preventDefault();
+
+  for(const t of e.changedTouches){
+    releaseJoystick(t.identifier);
+  }
+},{passive:false});
+
+
+canvas.addEventListener("touchcancel",e=>{
+  for(const t of e.changedTouches){
+    releaseJoystick(t.identifier);
+  }
+});
+
+
+/* =========================
+   POINTER
+========================= */
+
+canvas.addEventListener("pointerdown",e=>{
+  if(e.pointerType==="touch") return;
+
+  const x=e.clientX;
+  const y=e.clientY;
+
+  if(screen==="menu"){
+    handleMenuTouch(x,y);
+    return;
+  }
+
+  if(screen==="settings"){
+    handleSettingsTouch(x,y);
+    return;
+  }
+
+  if(screen==="weapons"){
+    handleWeaponTouch(x,y);
+    return;
+  }
+
+  if(screen==="gameover"){
+    reset();
+    screen="game";
+    return;
+  }
+
+  if(upgradeOpen){
+    for(let i=0;i<upgradeChoices.length;i++){
+      if(pointInUpgradeCard(x,y,i)){
+        chooseUpgrade(i);
+        return;
+      }
+    }
+    return;
+  }
+
+  if(weaponChoiceOpen){
+    for(let i=0;i<weaponChoices.length;i++){
+      if(pointInWeaponCard(x,y,i)){
+        chooseWeapon(i);
+        return;
+      }
+    }
+    return;
+  }
+
+  if(pointInRect(x,y,pauseRect())){
+    paused=!paused;
+  }
+});
+
+
+/* =========================
+   KEYBOARD
+========================= */
+
+const keys={};
+
+window.addEventListener("keydown",e=>{
+  keys[e.key.toLowerCase()]=true;
+
+  if(e.key==="Escape" && screen==="game"){
+    paused=!paused;
+  }
+});
+
+window.addEventListener("keyup",e=>{
+  keys[e.key.toLowerCase()]=false;
+});
+
+
+/* =========================
+   MENU
+========================= */
+
+function menuButtonRects(){
+  const w=Math.min(300,W-50);
+  const h=58;
+  const gap=15;
+
+  const x=(W-w)/2;
+  const start=H*.48;
+
+  return [
+    {x,y:start,w,h},
+    {x,y:start+h+gap,w,h},
+    {x,y:start+(h+gap)*2,w,h}
+  ];
+}
+
+function handleMenuTouch(x,y){
+  const r=menuButtonRects();
+
+  if(pointInRect(x,y,r[0])){
+    startGame();
+  }else if(pointInRect(x,y,r[1])){
+    screen="weapons";
+  }else if(pointInRect(x,y,r[2])){
+    screen="settings";
+  }
+}
+
+
+/* =========================
+   SETTINGS
+========================= */
+
+function settingsDeviceRects(){
+  const panelW=Math.min(360,W-32);
+  const x=(W-panelW)/2;
+
+  const gap=10;
+
+  const mobileW=Math.min(
+    190,
+    (panelW-gap)*.56
+  );
+
+  const computerW=panelW-gap-mobileW;
+
+  return [
+    {
+      x,
+      y:190,
+      w:mobileW,
+      h:72
+    },
+    {
+      x:x+mobileW+gap,
+      y:190,
+      w:computerW,
+      h:72
+    }
+  ];
+}
+
+function handleSettingsTouch(x,y){
+  const r=settingsDeviceRects();
+
+  if(pointInRect(x,y,r[0])){
+    selectedDevice="mobile";
+  }else if(pointInRect(x,y,r[1])){
+    selectedDevice="computer";
+  }
+
+  const back={
+    x:20,
+    y:20,
+    w:90,
+    h:45
+  };
+
+  if(pointInRect(x,y,back)){
+    screen="menu";
+  }
+
+  const auto={
+    x:W/2-140,
+    y:300,
+    w:280,
+    h:60
+  };
+
+  if(pointInRect(x,y,auto)){
+    autoShoot=!autoShoot;
+  }
+}
+
+
+/* =========================
+   WEAPON LOADOUT
+========================= */
+
+const weaponChoices=[
+  "scatter",
+  "fast"
+];
+
+function getWeaponCardRects(){
+  const gap=12;
+
+  if(H>=W){
+    const cardW=Math.min(340,W-36);
+    const cardH=140;
+
+    const total=cardH*2+gap;
+    const startY=H/2-total/2+10;
+
+    return [
+      {
+        x:(W-cardW)/2,
+        y:startY,
+        w:cardW,
+        h:cardH
+      },
+      {
+        x:(W-cardW)/2,
+        y:startY+cardH+gap,
+        w:cardW,
+        h:cardH
+      }
+    ];
+  }
+
+  const cardW=(W-36-gap)/2;
+  const cardH=150;
+  const y=H/2-cardH/2;
+
+  return [
+    {x:18,y,w:cardW,h:cardH},
+    {x:18+cardW+gap,y,w:cardW,h:cardH}
+  ];
+}
+
+function pointInWeaponCard(x,y,i){
+  const r=getWeaponCardRects()[i];
+  return r && pointInRect(x,y,r);
+}
+
+function handleWeaponTouch(x,y){
+  const rects=getWeaponCardRects();
+
+  for(let i=0;i<weaponChoices.length;i++){
+    if(pointInRect(x,y,rects[i])){
+      player.weapon=weaponChoices[i];
+      applyEquippedWeapon();
+      screen="menu";
+      return;
+    }
+  }
+
+  const back={
+    x:20,
+    y:20,
+    w:90,
+    h:45
+  };
+
+  if(pointInRect(x,y,back)){
+    screen="menu";
+  }
+}
+
+
+/* =========================
+   SHOOTING
+========================= */
+
+function startFastReload(){
+  if(player.reloading) return;
+
+  if(player.ammo>=player.maxAmmo) return;
+
+  player.reloading=true;
+  player.reloadTimer=player.reloadTime;
+}
+
+function fireBase(){
+  if(player.reloading) return;
+
+  if(player.ammo<=0){
+    startFastReload();
+    return;
+  }
+
+  const dx=player.aimX;
+  const dy=player.aimY;
+
+  bullets.push({
+    x:player.x,
+    y:player.y,
+    vx:dx*player.bulletSpeed,
+    vy:dy*player.bulletSpeed,
+    r:4,
+    damage:player.damage,
+    pierce:false
+  });
+
+  player.ammo--;
+
+  if(player.ammo<=0){
+    startFastReload();
+  }
+}
+
+function fireFast(){
+  if(player.reloading) return;
+
+  if(player.ammo<=0){
+    startFastReload();
+    return;
+  }
+
+  bullets.push({
+    x:player.x,
+    y:player.y,
+    vx:player.aimX*player.bulletSpeed,
+    vy:player.aimY*player.bulletSpeed,
+    r:3,
+    damage:player.damage,
+    pierce:false
+  });
+
+  player.ammo--;
+
+  if(player.ammo<=0){
+    startFastReload();
+  }
+}
+
+function fireScatter(){
+  if(player.reloading) return;
+
+  if(player.ammo<=0){
+    startFastReload();
+    return;
+  }
+
+  const baseAngle=Math.atan2(
+    player.aimY,
+    player.aimX
+  );
+
+  const tier=player.scatterTier||1;
+
+  const count=Math.min(
+    2+tier,
+    7
+  );
+
+  const spread=.18+(tier-1)*.045;
+
+  for(let i=0;i<count;i++){
+    const offset=
+      count===1
+      ? 0
+      : (i/(count-1)-.5)*spread;
+
+    const a=baseAngle+offset;
+
+    bullets.push({
+      x:player.x,
+      y:player.y,
+      vx:Math.cos(a)*player.bulletSpeed,
+      vy:Math.sin(a)*player.bulletSpeed,
+      r:4,
+      damage:player.damage,
+      pierce:(player.scatterTier||1)>=5
+    });
+  }
+
+  player.ammo--;
+
+  if(player.ammo<=0){
+    startFastReload();
+  }
+}
+
+
+/* =========================
+   XP / LEVELING
+========================= */
+
+function gainXP(amount){
+  xp+=amount;
+
+  if(xp>=xpNeed){
+    xp-=xpNeed;
+    level++;
+
+    xpNeed=Math.floor(
+      xpNeed*1.35+2
+    );
+
+    if(level===2 && player.weapon==="base"){
+      weaponChoiceOpen=true;
+    }else{
+      openUpgrade();
+    }
+  }
+}
+
+
+/* =========================
+   WEAPON CHOICE
+========================= */
+
+function chooseWeapon(index){
+  player.weapon=weaponChoices[index];
+  applyEquippedWeapon();
+
+  weaponChoiceOpen=false;
+
+  openUpgrade();
+}
+
+
+/* =========================
+   UPGRADES
+========================= */
+
+let upgradeChoices=[];
+
+function openUpgrade(){
+  const shuffled=[
+    ...fastUpgrades
+  ].sort(()=>Math.random()-.5);
+
+  upgradeChoices=shuffled.slice(0,2);
+
+  upgradeOpen=true;
+}
+
+function chooseUpgrade(index){
+  const upgrade=upgradeChoices[index];
+
+  if(!upgrade) return;
+
+  upgrade.apply();
+
+  upgradeOpen=false;
+  upgradeChoices=[];
+}
+
+
+/* =========================
+   UPGRADE CARD POSITIONS
+========================= */
+
+function getUpgradeCardRects(){
+  const gap=12;
+
+  if(H>=W){
+    const cardW=Math.min(340,W-36);
+    const cardH=145;
+
+    const total=cardH*2+gap;
+    const startY=H/2-total/2;
+
+    return [
+      {
+        x:(W-cardW)/2,
+        y:startY,
+        w:cardW,
+        h:cardH
+      },
+      {
+        x:(W-cardW)/2,
+        y:startY+cardH+gap,
+        w:cardW,
+        h:cardH
+      }
+    ];
+  }
+
+  const cardW=(W-36-gap)/2;
+  const cardH=180;
+
+  const y=H/2-cardH/2;
+
+  return [
+    {x:18,y,w:cardW,h:cardH},
+    {x:18+cardW+gap,y,w:cardW,h:cardH}
+  ];
+}
+
+function pointInUpgradeCard(x,y,i){
+  const r=getUpgradeCardRects()[i];
+  return r && pointInRect(x,y,r);
+}
+
+
+/* =========================
+   UPDATE
+========================= */
+
+let lastTime=performance.now();
+
+function update(dt){
+  if(screen!=="game") return;
+  if(paused) return;
+  if(gameOver) return;
+  if(upgradeOpen) return;
+  if(weaponChoiceOpen) return;
+
+  /* movement */
+
+  let mx=0;
+  let my=0;
+
+  if(joy.on){
+    mx=joy.dx;
+    my=joy.dy;
+  }else{
+    if(keys["w"]||keys["arrowup"]) my-=1;
+    if(keys["s"]||keys["arrowdown"]) my+=1;
+    if(keys["a"]||keys["arrowleft"]) mx-=1;
+    if(keys["d"]||keys["arrowright"]) mx+=1;
+  }
+
+  const ml=Math.hypot(mx,my);
+
+  if(ml>1){
+    mx/=ml;
+    my/=ml;
+  }
+
+  player.x+=mx*player.speed*dt;
+  player.y+=my*player.speed*dt;
+
+  player.x=Math.max(
+    arena.left+player.r,
+    Math.min(
+      arena.right-player.r,
+      player.x
+    )
+  );
+
+  player.y=Math.max(
+    arena.top+player.r,
+    Math.min(
+      gameBottom-player.r,
+      player.y
+    )
+  );
+
+
+  /* aiming */
+
+  if(aimJoy.on){
+    const l=Math.hypot(
+      aimJoy.dx,
+      aimJoy.dy
+    );
+
+    if(l>.15){
+      player.aimX=aimJoy.dx;
+      player.aimY=aimJoy.dy;
+    }
+  }
+
+
+  /* waves */
+
+  waveTimer+=dt;
+
+  const spawnRate=Math.max(
+    .22,
+    1.05-wave*.025
+  );
+
+  if(waveTimer>=spawnRate){
+    waveTimer=0;
+
+    if(wave%10===0){
+      if(!enemies.some(e=>e.boss)){
+        spawnBoss();
+      }
+    }else{
+      spawnEnemy();
+
+      if(Math.random()<Math.min(.35,wave*.01)){
+        spawnEnemy();
+      }
+    }
+  }
+
+
+  /* wave progression */
+
+  const livingNormal=enemies.some(
+    e=>!e.boss
+  );
+
+  if(
+    wave%10!==0 &&
+    !livingNormal &&
+    waveTimer>2
+  ){
+    wave++;
+    waveTimer=0;
+  }
+
+
+  /* reload */
+
+  if(player.reloading){
+    player.reloadTimer-=dt;
+
+    if(player.reloadTimer<=0){
+      player.reloading=false;
+      player.ammo=player.maxAmmo;
+    }
+  }
+
+
+  /* shooting */
+
+  player.fireTimer-=dt;
+
+  const aimActive=aimJoy.on;
+
+  if(
+    autoShoot &&
+    aimActive &&
+    player.fireTimer<=0 &&
+    !player.reloading
+  ){
+    if(player.weapon==="scatter"){
+      fireScatter();
+
+      player.fireTimer=
+        wave%10===0
+        ? 1
+        : player.fireCooldown;
+    }else if(player.weapon==="fast"){
+      fireFast();
+      player.fireTimer=player.fireCooldown;
+    }else{
+      fireBase();
+      player.fireTimer=player.fireCooldown;
+    }
+  }
+
+
+  /* bullets */
+
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+
+    b.x+=b.vx*dt;
+    b.y+=b.vy*dt;
+
+    let remove=
+      b.x<arena.left-80 ||
+      b.x>arena.right+80 ||
+      b.y<arena.top-80 ||
+      b.y>gameBottom+80;
+
+    for(let j=enemies.length-1;j>=0 && !remove;j--){
+      const e=enemies[j];
+
+      const dx=b.x-e.x;
+      const dy=b.y-e.y;
+
+      const hitDist=b.r+e.r;
+
+      if(dx*dx+dy*dy<hitDist*hitDist){
+        e.hp-=b.damage;
+
+        if(e.hp<=0){
+          score+=e.boss?500:10;
+
+          xpOrbs.push({
+            x:e.x,
+            y:e.y,
+            r:e.boss?9:5,
+            value:e.boss?15:2
+          });
+
+          enemies.splice(j,1);
+        }
+
+        if(!b.pierce){
+          remove=true;
+        }
+      }
+    }
+
+    if(remove){
+      bullets.splice(i,1);
+    }
+  }
+
+
+  /* enemies */
+
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+
+    const dx=player.x-e.x;
+    const dy=player.y-e.y;
+
+    const d=Math.hypot(dx,dy)||1;
+
+    e.x+=dx/d*e.speed*dt;
+    e.y+=dy/d*e.speed*dt;
+
+    const hit=e.r+player.r;
+
+    if(dx*dx+dy*dy<hit*hit){
+      player.hp-=
+        (e.boss?30:15)*dt;
+
+      if(player.hp<=0){
+        player.hp=0;
+        gameOver=true;
+      }
+    }
+
+    if(e.boss){
+      e.shootTimer-=dt;
+
+      if(e.shootTimer<=0){
+        e.shootTimer=1.7;
+
+        const count=10;
+
+        for(let k=0;k<count;k++){
+          const a=
+            Math.PI*2*k/count;
+
+          enemyBullets.push({
+            x:e.x,
+            y:e.y,
+            vx:Math.cos(a)*130,
+            vy:Math.sin(a)*130,
+            r:6,
+            damage:10
+          });
+        }
+      }
+    }
+  }
+
+
+  /* enemy bullets */
+
+  for(let i=enemyBullets.length-1;i>=0;i--){
+    const b=enemyBullets[i];
+
+    b.x+=b.vx*dt;
+    b.y+=b.vy*dt;
+
+    const dx=b.x-player.x;
+    const dy=b.y-player.y;
+
+    const hit=b.r+player.r;
+
+    if(dx*dx+dy*dy<hit*hit){
+      player.hp-=b.damage;
+      enemyBullets.splice(i,1);
+
+      if(player.hp<=0){
+        player.hp=0;
+        gameOver=true;
+      }
+
+      continue;
+    }
+
+    if(
+      b.x<arena.left-60 ||
+      b.x>arena.right+60 ||
+      b.y<arena.top-60 ||
+      b.y>gameBottom+60
+    ){
+      enemyBullets.splice(i,1);
+    }
+  }
+
+
+  /* XP */
+
+  for(let i=xpOrbs.length-1;i>=0;i--){
+    const o=xpOrbs[i];
+
+    const dx=player.x-o.x;
+    const dy=player.y-o.y;
+
+    const d=Math.hypot(dx,dy);
+
+    if(d<90){
+      const pull=180;
+
+      o.x+=dx/d*pull*dt;
+      o.y+=dy/d*pull*dt;
+    }
+
+    if(d<player.r+o.r+4){
+      gainXP(o.value);
+      xpOrbs.splice(i,1);
+    }
+  }
+}
+
+
+/* =========================
+   DRAW HELPERS
+========================= */
+
+function roundedRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.roundRect(x,y,w,h,r);
+}
+
+function text(txt,x,y,size=16,align="left"){
+  ctx.font=`${size}px monospace`;
+  ctx.textAlign=align;
+  ctx.textBaseline="middle";
+  ctx.fillText(txt,x,y);
+}
+
+function panel(x,y,w,h){
+  ctx.fillStyle="#101520";
+  ctx.strokeStyle="#313b4d";
+  ctx.lineWidth=2;
+
+  roundedRect(x,y,w,h,10);
+
+  ctx.fill();
+  ctx.stroke();
+}
+
+
+/* =========================
+   MENU DRAW
+========================= */
+
+function drawMenu(){
+  ctx.fillStyle="#080a10";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+  text(
+    "BULLETBOUND",
+    W/2,
+    H*.22,
+    Math.min(32,W*.085),
+    "center"
+  );
+
+  ctx.fillStyle="#8e9aad";
+  text(
+    "SURVIVE. SHOOT. UPGRADE.",
+    W/2,
+    H*.29,
+    12,
+    "center"
+  );
+
+  const r=menuButtonRects();
+
+  const labels=[
+    "PLAY",
+    "WEAPONS",
+    "SETTINGS"
+  ];
+
+  for(let i=0;i<r.length;i++){
+    const b=r[i];
+
+    ctx.fillStyle="#151c29";
+    ctx.strokeStyle="#39465a";
+    ctx.lineWidth=2;
+
+    roundedRect(
+      b.x,b.y,b.w,b.h,10
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      labels[i],
+      W/2,
+      b.y+b.h/2,
+      18,
+      "center"
+    );
+  }
+}
+
+
+/* =========================
+   SETTINGS DRAW
+========================= */
+
+function drawSettings(){
+  ctx.fillStyle="#080a10";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+  text(
+    "SETTINGS",
+    W/2,
+    45,
+    22,
+    "center"
+  );
+
+  const back={
+    x:20,
+    y:20,
+    w:90,
+    h:45
+  };
+
+  ctx.fillStyle="#151c29";
+  ctx.strokeStyle="#39465a";
+
+  roundedRect(
+    back.x,
+    back.y,
+    back.w,
+    back.h,
+    8
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "BACK",
+    back.x+back.w/2,
+    back.y+back.h/2,
+    14,
+    "center"
+  );
+
+
+  /* device buttons */
+
+  const r=settingsDeviceRects();
+
+  for(let i=0;i<r.length;i++){
+    const b=r[i];
+
+    ctx.fillStyle=
+      selectedDevice===
+      (i===0?"mobile":"computer")
+      ? "#26354a"
+      : "#121923";
+
+    ctx.strokeStyle=
+      selectedDevice===
+      (i===0?"mobile":"computer")
+      ? "#7296c7"
+      : "#39465a";
+
+    ctx.lineWidth=2;
+
+    roundedRect(
+      b.x,b.y,b.w,b.h,10
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+    if(i===0){
+      ctx.fillStyle="#ffffff";
+
+      /* phone icon */
+
+      const ix=b.x+b.w/2-28;
+      const iy=b.y+17;
+
+      ctx.strokeStyle="#ffffff";
+      ctx.lineWidth=2;
+
+      ctx.strokeRect(
+        ix,
+        iy,
+        20,
+        36
+      );
+
+      ctx.fillStyle="#ffffff";
+      ctx.beginPath();
+      ctx.arc(
+        ix+10,
+        iy+31,
+        2,
+        0,
+        Math.PI*2
+      );
+      ctx.fill();
+
+      text(
+        "MOBILE",
+        b.x+b.w/2+15,
+        b.y+b.h/2,
+        13,
+        "center"
+      );
+    }else{
+      ctx.fillStyle="#ffffff";
+
+      text(
+        "COMPUTER",
+        b.x+b.w/2,
+        b.y+b.h/2,
+        13,
+        "center"
+      );
+    }
+  }
+
+
+  /* auto shoot */
+
+  const auto={
+    x:W/2-140,
+    y:300,
+    w:280,
+    h:60
+  };
+
+  ctx.fillStyle="#121923";
+  ctx.strokeStyle="#39465a";
+
+  roundedRect(
+    auto.x,
+    auto.y,
+    auto.w,
+    auto.h,
+    10
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "AUTO SHOOT: "+(autoShoot?"ON":"OFF"),
+    W/2,
+    auto.y+auto.h/2,
+    14,
+    "center"
+  );
+}
+
+
+/* =========================
+   WEAPONS DRAW
+========================= */
+
+function drawWeapons(){
+  ctx.fillStyle="#080a10";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "WEAPONS",
+    W/2,
+    45,
+    22,
+    "center"
+  );
+
+  const back={
+    x:20,
+    y:20,
+    w:90,
+    h:45
+  };
+
+  ctx.fillStyle="#151c29";
+  ctx.strokeStyle="#39465a";
+
+  roundedRect(
+    back.x,
+    back.y,
+    back.w,
+    back.h,
+    8
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "BACK",
+    back.x+back.w/2,
+    back.y+back.h/2,
+    14,
+    "center"
+  );
+
+
+  const rects=getWeaponCardRects();
+
+  for(let i=0;i<weaponChoices.length;i++){
+    const key=weaponChoices[i];
+    const w=weapons[key];
+    const b=rects[i];
+
+    ctx.fillStyle=
+      player.weapon===key
+      ? "#26354a"
+      : "#121923";
+
+    ctx.strokeStyle=
+      player.weapon===key
+      ? "#7296c7"
+      : "#39465a";
+
+    ctx.lineWidth=2;
+
+    roundedRect(
+      b.x,b.y,b.w,b.h,10
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      w.name,
+      b.x+18,
+      b.y+32,
+      17
+    );
+
+    ctx.fillStyle="#8e9aad";
+
+    text(
+      w.desc,
+      b.x+18,
+      b.y+65,
+      11
+    );
+
+    ctx.fillStyle="#aeb9ca";
+
+    if(key==="scatter"){
+      text(
+        "MULTI-SHOT",
+        b.x+18,
+        b.y+98,
+        11
+      );
+    }else{
+      text(
+        "HIGH FIRE RATE",
+        b.x+18,
+        b.y+98,
+        11
+      );
+    }
+  }
+}
+
+
+/* =========================
+   ARENA
+========================= */
+
+function drawArena(){
+  ctx.fillStyle="#0d1119";
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  /* map */
+
+  ctx.fillStyle="#121923";
+
+  ctx.fillRect(
+    arena.left,
+    arena.top,
+    arena.right-arena.left,
+    gameBottom-arena.top
+  );
+
+  /* border */
+
+  ctx.strokeStyle="#293448";
+  ctx.lineWidth=2;
+
+  ctx.strokeRect(
+    arena.left,
+    arena.top,
+    arena.right-arena.left,
+    gameBottom-arena.top
+  );
+
+
+  /* subtle grid */
+
+  ctx.strokeStyle="#18212e";
+  ctx.lineWidth=1;
+
+  const grid=32;
+
+  for(
+    let x=arena.left;
+    x<arena.right;
+    x+=grid
+  ){
+    ctx.beginPath();
+    ctx.moveTo(x,arena.top);
+    ctx.lineTo(x,gameBottom);
+    ctx.stroke();
+  }
+
+  for(
+    let y=arena.top;
+    y<gameBottom;
+    y+=grid
+  ){
+    ctx.beginPath();
+    ctx.moveTo(arena.left,y);
+    ctx.lineTo(arena.right,y);
+    ctx.stroke();
+  }
+}
+
+
+/* =========================
+   CONTROL STRIP
+========================= */
+
+function drawControls(){
+  ctx.fillStyle="#0b0f16";
+
+  ctx.fillRect(
+    0,
+    controlTop,
+    W,
+    H-controlTop
+  );
+
+  ctx.strokeStyle="#222d3c";
+  ctx.lineWidth=2;
+
+  ctx.beginPath();
+  ctx.moveTo(0,controlTop);
+  ctx.lineTo(W,controlTop);
+  ctx.stroke();
+
+
+  /* joystick circles */
+
+  updateJoystickPositions();
+
+  ctx.globalAlpha=
+    joy.on ? .35 : .2;
+
+  ctx.fillStyle="#64748b";
+
+  ctx.beginPath();
+  ctx.arc(
+    joy.x,
+    joy.y,
+    joy.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  ctx.globalAlpha=.45;
+
+  ctx.strokeStyle="#a5b4c7";
+  ctx.lineWidth=2;
+
+  ctx.beginPath();
+  ctx.arc(
+    joy.x,
+    joy.y,
+    joy.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.stroke();
+
+
+  ctx.globalAlpha=
+    aimJoy.on ? .35 : .2;
+
+  ctx.fillStyle="#64748b";
+
+  ctx.beginPath();
+  ctx.arc(
+    aimJoy.x,
+    aimJoy.y,
+    aimJoy.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  ctx.globalAlpha=.45;
+
+  ctx.strokeStyle="#a5b4c7";
+
+  ctx.beginPath();
+  ctx.arc(
+    aimJoy.x,
+    aimJoy.y,
+    aimJoy.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.stroke();
+
+  ctx.globalAlpha=1;
+
+
+  /* labels */
+
+  ctx.fillStyle="#7d899b";
+
+  text(
+    "MOVE",
+    joy.x,
+    joy.y+joy.r+15,
+    9,
+    "center"
+  );
+
+  text(
+    "AIM / FIRE",
+    aimJoy.x,
+    aimJoy.y+aimJoy.r+15,
+    9,
+    "center"
+  );
+}
+
+
+/* =========================
+   TOP HUD
+========================= */
+
+function drawHUD(){
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "WAVE "+wave,
+    18,
+    25,
+    14
+  );
+
+  text(
+    "LV "+level,
+    18,
+    48,
+    12
+  );
+
+  text(
+    "SCORE "+score,
+    W/2,
+    25,
+    12,
+    "center"
+  );
+
+
+  /* pause */
+
+  const p=pauseRect();
+
+  ctx.fillStyle="#151c29";
+  ctx.strokeStyle="#39465a";
+  ctx.lineWidth=2;
+
+  roundedRect(
+    p.x,p.y,p.w,p.h,8
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ffffff";
+
+  ctx.fillRect(
+    p.x+13,
+    p.y+11,
+    5,
+    22
+  );
+
+  ctx.fillRect(
+    p.x+26,
+    p.y+11,
+    5,
+    22
+  );
+
+
+  /* XP bar */
+
+  const barX=18;
+  const barY=58;
+  const barW=W-36;
+  const barH=8;
+
+  ctx.fillStyle="#1c2532";
+
+  ctx.fillRect(
+    barX,
+    barY,
+    barW,
+    barH
+  );
+
+  ctx.fillStyle="#6f8dbb";
+
+  ctx.fillRect(
+    barX,
+    barY,
+    barW*Math.min(
+      1,
+      xp/xpNeed
+    ),
+    barH
+  );
+
+
+  /* HP */
+
+  const hpY=72;
+
+  ctx.fillStyle="#1c2532";
+
+  ctx.fillRect(
+    18,
+    hpY,
+    Math.min(150,W-36),
+    7
+  );
+
+  ctx.fillStyle="#b84d5a";
+
+  ctx.fillRect(
+    18,
+    hpY,
+    Math.min(150,W-36)*
+    (player.hp/player.maxHp),
+    7
+  );
+}
+
+
+/* =========================
+   XP ORBS
+========================= */
+
+function drawXP(){
+  for(const o of xpOrbs){
+    ctx.fillStyle=
+      o.value>5
+      ? "#d3b65a"
+      : "#7296c7";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      o.x,
+      o.y,
+      o.r,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fill();
+  }
+}
+
+
+/* =========================
+   BULLETS
+========================= */
+
+function drawBullets(){
+  ctx.fillStyle="#e9eef7";
+
+  for(const b of bullets){
+    ctx.beginPath();
+
+    ctx.arc(
+      b.x,
+      b.y,
+      b.r,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fill();
+  }
+
+  ctx.fillStyle="#d25d68";
+
+  for(const b of enemyBullets){
+    ctx.beginPath();
+
+    ctx.arc(
+      b.x,
+      b.y,
+      b.r,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fill();
+  }
+}
+
+
+/* =========================
+   ENEMIES
+========================= */
+
+function drawEnemies(){
+  for(const e of enemies){
+    ctx.fillStyle=
+      e.boss
+      ? "#8b4652"
+      : "#53606d";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      e.x,
+      e.y,
+      e.r,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fill();
+
+    if(e.boss){
+      ctx.strokeStyle="#d0717c";
+      ctx.lineWidth=3;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        e.x,
+        e.y,
+        e.r+5,
+        0,
+        Math.PI*2
+      );
+
+      ctx.stroke();
+    }
+
+    /* health bar */
+
+    const bw=e.r*2.2;
+    const bh=4;
+
+    ctx.fillStyle="#171b22";
+
+    ctx.fillRect(
+      e.x-bw/2,
+      e.y-e.r-10,
+      bw,
+      bh
+    );
+
+    ctx.fillStyle="#a85b64";
+
+    ctx.fillRect(
+      e.x-bw/2,
+      e.y-e.r-10,
+      bw*Math.max(
+        0,
+        e.hp/e.maxHp
+      ),
+      bh
+    );
+  }
+}
+
+
+/* =========================
+   PLAYER
+========================= */
+
+function drawPlayer(){
+  ctx.fillStyle="#d6dce6";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    player.x,
+    player.y,
+    player.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  /* aim direction */
+
+  ctx.strokeStyle="#ffffff";
+  ctx.lineWidth=4;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    player.x,
+    player.y
+  );
+
+  ctx.lineTo(
+    player.x+
+      player.aimX*20,
+    player.y+
+      player.aimY*20
+  );
+
+  ctx.stroke();
+}
+
+
+/* =========================
+   WEAPON CHOICE OVERLAY
+========================= */
+
+function drawWeaponChoice(){
+  ctx.fillStyle="rgba(5,7,11,.88)";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "CHOOSE YOUR WEAPON",
+    W/2,
+    H*.15,
+    20,
+    "center"
+  );
+
+  const rects=getWeaponCardRects();
+
+  for(let i=0;i<weaponChoices.length;i++){
+    const key=weaponChoices[i];
+    const w=weapons[key];
+    const b=rects[i];
+
+    ctx.fillStyle="#141c28";
+    ctx.strokeStyle="#647b9e";
+    ctx.lineWidth=2;
+
+    roundedRect(
+      b.x,
+      b.y,
+      b.w,
+      b.h,
+      10
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      w.name,
+      b.x+18,
+      b.y+32,
+      17
+    );
+
+    ctx.fillStyle="#9ca9bb";
+
+    text(
+      w.desc,
+      b.x+18,
+      b.y+66,
+      11
+    );
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      "TAP TO SELECT",
+      b.x+18,
+      b.y+b.h-25,
+      10
+    );
+  }
+}
+
+
+/* =========================
+   UPGRADE OVERLAY
+========================= */
+
+function drawUpgrade(){
+  ctx.fillStyle="rgba(5,7,11,.9)";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "LEVEL UP!",
+    W/2,
+    H*.12,
+    24,
+    "center"
+  );
+
+  ctx.fillStyle="#9ca9bb";
+
+  text(
+    "CHOOSE AN UPGRADE",
+    W/2,
+    H*.17,
+    11,
+    "center"
+  );
+
+  const rects=getUpgradeCardRects();
+
+  for(let i=0;i<upgradeChoices.length;i++){
+    const u=upgradeChoices[i];
+    const b=rects[i];
+
+    ctx.fillStyle="#141c28";
+    ctx.strokeStyle="#647b9e";
+    ctx.lineWidth=2;
+
+    roundedRect(
+      b.x,
+      b.y,
+      b.w,
+      b.h,
+      10
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      u.name,
+      b.x+18,
+      b.y+35,
+      16
+    );
+
+    ctx.fillStyle="#aab5c4";
+
+    text(
+      u.desc,
+      b.x+18,
+      b.y+72,
+      11
+    );
+
+    ctx.fillStyle="#ffffff";
+
+    text(
+      "TAP TO SELECT",
+      b.x+18,
+      b.y+b.h-25,
+      10
+    );
+  }
+}
+
+
+/* =========================
+   PAUSED
+========================= */
+
+function drawPaused(){
+  ctx.fillStyle="rgba(4,6,10,.68)";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "PAUSED",
+    W/2,
+    H/2,
+    26,
+    "center"
+  );
+
+  ctx.fillStyle="#9ca9bb";
+
+  text(
+    "TAP PAUSE TO CONTINUE",
+    W/2,
+    H/2+38,
+    10,
+    "center"
+  );
+}
+
+
+/* =========================
+   GAME OVER
+========================= */
+
+function drawGameOver(){
+  ctx.fillStyle="rgba(4,6,10,.82)";
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "GAME OVER",
+    W/2,
+    H*.4,
+    28,
+    "center"
+  );
+
+  ctx.fillStyle="#aab5c4";
+
+  text(
+    "SCORE "+score,
+    W/2,
+    H*.47,
+    13,
+    "center"
+  );
+
+  ctx.fillStyle="#151c29";
+  ctx.strokeStyle="#647b9e";
+  ctx.lineWidth=2;
+
+  const b={
+    x:W/2-125,
+    y:H*.55,
+    w:250,
+    h:58
+  };
+
+  roundedRect(
+    b.x,b.y,b.w,b.h,10
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ffffff";
+
+  text(
+    "TAP TO RESTART",
+    W/2,
+    b.y+b.h/2,
+    13,
+    "center"
+  );
+}
+
+
+/* =========================
+   MAIN DRAW
+========================= */
+
+function draw(){
+  if(screen==="menu"){
+    drawMenu();
+    return;
+  }
+
+  if(screen==="settings"){
+    drawSettings();
+    return;
+  }
+
+  if(screen==="weapons"){
+    drawWeapons();
+    return;
+  }
+
+  if(screen==="game"){
+    drawArena();
+    drawHUD();
+    drawControls();
+    drawXP();
+    drawBullets();
+    drawEnemies();
+    drawPlayer();
+
+    if(weaponChoiceOpen){
+      drawWeaponChoice();
+    }
+
+    if(upgradeOpen){
+      drawUpgrade();
+    }
+
+    if(paused){
+      drawPaused();
+    }
+
+    if(gameOver){
+      drawGameOver();
+    }
+  }
+}
+
+
+/* =========================
+   LOOP
+========================= */
+
+function loop(now){
+  const dt=Math.min(
+    .033,
+    (now-lastTime)/1000
+  );
+
+  lastTime=now;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(loop);
+}
+
 requestAnimationFrame(loop);
 
 </script>
-
 </body>
 </html>
-```
