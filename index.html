@@ -48,6 +48,10 @@ c.height=H*dpr;
 
 ctx.setTransform(dpr,0,0,dpr,0,0);
 
+updateArena();
+joystickPos();
+aimJoystickPos();
+
 }
 
 addEventListener("resize",resize);
@@ -67,9 +71,73 @@ bottom:22
 
 function updateArena(){
 
-arena.right=W-22;
+arena.left=18;
+arena.right=W-18;
+arena.top=58;
+arena.bottom=18;
 
 }
+
+
+// =========================
+// MOBILE CONTROL STRIP
+// =========================
+
+ctx.fillStyle="#080a10";
+ctx.fillRect(
+0,
+gameBottom+8,
+W,
+H-gameBottom-8
+);
+
+ctx.strokeStyle="#263244";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.moveTo(0,gameBottom+8);
+ctx.lineTo(W,gameBottom+8);
+ctx.stroke();
+
+function drawJoystick(j,label){
+
+ctx.globalAlpha=.82;
+
+ctx.fillStyle="#151d2b";
+ctx.beginPath();
+ctx.arc(j.x,j.y,j.r,0,Math.PI*2);
+ctx.fill();
+
+ctx.strokeStyle="#52617a";
+ctx.lineWidth=2;
+ctx.stroke();
+
+ctx.fillStyle="#27344a";
+ctx.beginPath();
+ctx.arc(
+j.on?j.tx:j.x,
+j.on?j.ty:j.y,
+j.knobR,
+0,
+Math.PI*2
+);
+ctx.fill();
+
+ctx.strokeStyle="#70809a";
+ctx.stroke();
+
+ctx.globalAlpha=1;
+
+ctx.fillStyle="#7d8799";
+ctx.textAlign="center";
+ctx.font="10px system-ui";
+ctx.fillText(label,j.x,j.y+j.r+18);
+
+}
+
+drawJoystick(joy,"MOVE");
+drawJoystick(aimJoy,"AIM");
+
+ctx.textAlign="left";
 
 
 // =========================
@@ -163,6 +231,11 @@ let gameOver=false;
 let started=false;
 
 let equippedWeapon=null;
+
+// SETTINGS
+let settingsOpen=false;
+let autoShoot=false;
+let selectedDevice="mobile";
 
 
 // =========================
@@ -550,9 +623,21 @@ Math.random()*20
 }
 
 
+function isBossWave(w){
+return w%10===0;
+}
+
+
+function getWaveNormalCount(w){
+return getWaveEnemyCount(w);
+}
+
+
 function startWave(){
 
-waveTotal=getWaveEnemyCount(wave);
+waveTotal=
+getWaveNormalCount(wave)+
+(isBossWave(wave)?1:0);
 
 waveSpawned=0;
 
@@ -665,6 +750,7 @@ paused=false;
 upgradeChoices=[];
 upgradeOpen=false;
 weaponChoiceOpen=false;
+settingsOpen=false;
 
 gameOver=false;
 
@@ -704,6 +790,10 @@ applyEquippedWeapon();
 // =========================
 
 function startGame(){
+
+if(selectedDevice==="mobile" && screen.orientation && screen.orientation.lock){
+screen.orientation.lock("landscape").catch(()=>{});
+}
 
 started=true;
 
@@ -796,22 +886,92 @@ Math.random()<.5
 }
 
 
+function spawnBoss(){
+
+const side=
+Math.floor(Math.random()*4);
+
+let x;
+let y;
+
+if(side===0){
+
+x=arena.left-65;
+y=arena.top+
+Math.random()*
+(H-arena.top-arena.bottom);
+
+}
+
+else if(side===1){
+
+x=arena.right+65;
+y=arena.top+
+Math.random()*
+(H-arena.top-arena.bottom);
+
+}
+
+else if(side===2){
+
+x=arena.left+
+Math.random()*
+(arena.right-arena.left);
+y=arena.top-65;
+
+}
+
+else{
+
+x=arena.left+
+Math.random()*
+(arena.right-arena.left);
+y=H-arena.bottom+65;
+
+}
+
+enemies.push({
+
+x:x,
+y:y,
+
+r:56,
+
+hp:1000,
+maxHp:1000,
+
+speed:22,
+
+isBoss:true,
+
+radialShoot:5,
+bigShoot:2.5,
+
+color:"#d83b52"
+
+});
+
+}
+
+
 // =========================
 // JOYSTICK POSITIONS
 // =========================
 
 function joystickPos(){
 
-joy.x=82;
-joy.y=H-82;
+const controlY=H-72;
+joy.x=76;
+joy.y=controlY;
 
 }
 
 
 function aimJoystickPos(){
 
-aimJoy.x=W-65;
-aimJoy.y=H-65;
+const controlY=H-72;
+aimJoy.x=W-76;
+aimJoy.y=controlY;
 
 }
 
@@ -928,6 +1088,73 @@ y<=by+bh
 }
 
 
+function pointInSettingsButton(x,y){
+
+const bw=Math.min(260,W-60);
+const bh=54;
+
+const bx=(W-bw)/2;
+const by=H/2+146;
+
+return(
+x>=bx&&
+x<=bx+bw&&
+y>=by&&
+y<=by+bh
+);
+
+}
+
+function pointInMobileDevice(x,y){
+
+const gap=12;
+const bw=Math.min(190,(W-44-gap));
+const bh=70;
+const total=bw+gap;
+const bx=(W-total)/2;
+const by=H/2-120;
+
+return(
+x>=bx&&
+x<=bx+bw&&
+y>=by&&
+y<=by+bh
+);
+
+}
+
+function pointInAutoShoot(x,y){
+
+const bw=Math.min(300,W-50);
+const bh=54;
+const bx=(W-bw)/2;
+const by=H/2-25;
+
+return(
+x>=bx&&
+x<=bx+bw&&
+y>=by&&
+y<=by+bh
+);
+
+}
+
+function pointInSettingsBack(x,y){
+
+const bw=Math.min(180,W-60);
+const bh=50;
+const bx=(W-bw)/2;
+const by=H-85;
+
+return(
+x>=bx&&
+x<=bx+bw&&
+y>=by&&
+y<=by+bh
+);
+
+}
+
 function pointInBackButton(x,y){
 
 const bw=Math.min(180,W-60);
@@ -1012,6 +1239,76 @@ x<=cardX+cardW&&
 y>=cardY&&
 y<=cardY+cardH
 );
+
+}
+
+
+// =========================
+// AUTO SHOOT
+// =========================
+
+function getClosestEnemy(){
+
+let closest=null;
+let best=Infinity;
+
+for(const e of enemies){
+
+if(e.hp<=0) continue;
+
+const d=Math.hypot(
+e.x-player.x,
+e.y-player.y
+);
+
+if(d<best){
+best=d;
+closest=e;
+}
+
+}
+
+return closest;
+
+}
+
+function updateAutoShoot(){
+
+if(!autoShoot || aimJoy.on)
+return;
+
+const target=getClosestEnemy();
+
+if(!target)
+return;
+
+player.aimTarget=Math.atan2(
+target.y-player.y,
+target.x-player.x
+);
+
+player.aim=player.aimTarget;
+
+if(player.weapon===null){
+
+if(shoot<=0)
+fireBase();
+
+}
+
+else if(player.weapon==="fast"){
+
+if(shoot<=0 && !player.reloading)
+fireFast();
+
+}
+
+else if(player.weapon==="scatter"){
+
+if(shoot<=0)
+fireScatter();
+
+}
 
 }
 
@@ -1296,6 +1593,32 @@ e.preventDefault();
 
 if(!started){
 
+if(settingsOpen){
+
+for(const touch of e.changedTouches){
+
+if(pointInMobileDevice(touch.clientX,touch.clientY)){
+selectedDevice="mobile";
+settingsOpen=false;
+return;
+}
+
+if(pointInAutoShoot(touch.clientX,touch.clientY)){
+autoShoot=!autoShoot;
+return;
+}
+
+if(pointInSettingsBack(touch.clientX,touch.clientY)){
+settingsOpen=false;
+return;
+}
+
+}
+
+return;
+
+}
+
 if(loadoutOpen){
 
 for(const touch of e.changedTouches){
@@ -1369,6 +1692,18 @@ touch.clientY
 ){
 
 loadoutOpen=true;
+return;
+
+}
+
+if(
+pointInSettingsButton(
+touch.clientX,
+touch.clientY
+)
+){
+
+settingsOpen=true;
 return;
 
 }
@@ -1635,6 +1970,28 @@ e.preventDefault();
 
 if(!started){
 
+if(settingsOpen){
+
+if(pointInMobileDevice(e.clientX,e.clientY)){
+selectedDevice="mobile";
+settingsOpen=false;
+return;
+}
+
+if(pointInAutoShoot(e.clientX,e.clientY)){
+autoShoot=!autoShoot;
+return;
+}
+
+if(pointInSettingsBack(e.clientX,e.clientY)){
+settingsOpen=false;
+return;
+}
+
+return;
+
+}
+
 if(loadoutOpen){
 
 for(let i=0;i<2;i++){
@@ -1697,6 +2054,18 @@ e.clientY
 ){
 
 loadoutOpen=true;
+return;
+
+}
+
+if(
+pointInSettingsButton(
+e.clientX,
+e.clientY
+)
+){
+
+settingsOpen=true;
 return;
 
 }
@@ -2009,7 +2378,21 @@ waveSpawnTimer-=dt;
 
 if(waveSpawnTimer<=0){
 
+const normalCount=getWaveNormalCount(wave);
+
+if(
+isBossWave(wave)&&
+waveSpawned===normalCount
+){
+
+spawnBoss();
+
+}
+else{
+
 spawnEnemy();
+
+}
 
 waveSpawned++;
 
@@ -2056,6 +2439,10 @@ player.reloading=false;
 
 }
 
+
+// AUTO SHOOT
+
+updateAutoShoot();
 
 // FIRE TIMER
 
@@ -2115,6 +2502,70 @@ player.x-e.x
 e.x+=Math.cos(a)*e.speed*dt;
 e.y+=Math.sin(a)*e.speed*dt;
 
+if(e.isBoss){
+
+// Boss attack speed doubles below 250 HP.
+const attackMultiplier=e.hp<=250?2:1;
+
+e.radialShoot-=dt;
+e.bigShoot-=dt;
+
+// 12-way radial attack: 10 damage.
+if(e.radialShoot<=0){
+
+for(let i=0;i<12;i++){
+
+const aa=
+i*(Math.PI*2/12);
+
+enemyShots.push({
+
+x:e.x,
+y:e.y,
+
+vx:Math.cos(aa)*95,
+vy:Math.sin(aa)*95,
+
+r:7,
+life:7,
+
+damage:10,
+bossShot:true
+
+});
+
+}
+
+e.radialShoot=5/attackMultiplier;
+
+}
+
+// Large slow aimed attack: 50 damage.
+if(e.bigShoot<=0){
+
+enemyShots.push({
+
+x:e.x,
+y:e.y,
+
+vx:Math.cos(a)*55,
+vy:Math.sin(a)*55,
+
+r:14,
+life:10,
+
+damage:50,
+bigBossShot:true
+
+});
+
+e.bigShoot=5/attackMultiplier;
+
+}
+
+}
+else{
+
 e.shoot-=dt;
 
 if(e.shoot<=0){
@@ -2128,11 +2579,15 @@ vx:Math.cos(a)*130,
 vy:Math.sin(a)*130,
 
 r:6,
-life:5
+life:5,
+
+damage:15
 
 });
 
 e.shoot=2.5;
+
+}
 
 }
 
@@ -2169,7 +2624,7 @@ if(
 s.x<arena.left||
 s.x>arena.right||
 s.y<arena.top||
-s.y>H-arena.bottom
+s.y>gameBottom
 ){
 
 s.life=0;
@@ -2197,7 +2652,10 @@ s.y-player.y
 s.r+player.r
 ){
 
-player.hp-=15;
+player.hp-=
+s.damage!==undefined
+?s.damage
+:15;
 
 s.life=0;
 
@@ -2262,7 +2720,7 @@ e.hp<=0&&
 
 e.dead=true;
 
-score+=10;
+score+=e.isBoss?100:10;
 
 orbs.push({
 
@@ -2270,6 +2728,22 @@ x:e.x,
 y:e.y
 
 });
+
+// Boss rewards more XP.
+if(e.isBoss){
+
+for(let i=0;i<4;i++){
+
+orbs.push({
+
+x:e.x+(Math.random()-.5)*30,
+y:e.y+(Math.random()-.5)*30
+
+});
+
+}
+
+}
 
 }
 
@@ -2284,7 +2758,7 @@ s.life>0&&
 s.x>arena.left&&
 s.x<arena.right&&
 s.y>arena.top&&
-s.y<H-arena.bottom
+s.y<gameBottom
 );
 
 enemyShots=enemyShots.filter(
@@ -2743,6 +3217,44 @@ wy+34
 );
 
 
+// SETTINGS
+
+const sw=Math.min(260,W-60);
+const sh=54;
+const sx=(W-sw)/2;
+const sy=H/2+146;
+
+ctx.fillStyle="#121a28";
+
+ctx.fillRect(
+sx,
+sy,
+sw,
+sh
+);
+
+ctx.strokeStyle="#394355";
+
+ctx.lineWidth=2;
+
+ctx.strokeRect(
+sx,
+sy,
+sw,
+sh
+);
+
+ctx.fillStyle="#d9e2f0";
+
+ctx.font="bold 17px system-ui";
+
+ctx.fillText(
+"SETTINGS",
+W/2,
+sy+34
+);
+
+
 // EQUIPPED
 
 ctx.fillStyle="#7d8799";
@@ -2773,6 +3285,117 @@ ctx.fillText(
 W/2,
 H-30
 );
+
+}
+
+
+// =========================
+// SETTINGS
+// =========================
+
+if(settingsOpen){
+
+ctx.fillStyle="#080a10";
+ctx.fillRect(0,0,W,H);
+
+const panelW=Math.min(560,W-32);
+const panelH=Math.min(430,H-40);
+const panelX=(W-panelW)/2;
+const panelY=(H-panelH)/2;
+
+ctx.fillStyle="#111827";
+ctx.fillRect(panelX,panelY,panelW,panelH);
+
+ctx.strokeStyle="#394355";
+ctx.lineWidth=3;
+ctx.strokeRect(panelX,panelY,panelW,panelH);
+
+ctx.fillStyle="#65e6ff";
+ctx.textAlign="center";
+ctx.font="bold 28px system-ui";
+ctx.fillText("SETTINGS",W/2,panelY+42);
+
+// Device buttons
+const gap=12;
+const deviceW=Math.min(190,(W-44-gap));
+const deviceH=70;
+const deviceTotal=deviceW+gap;
+const deviceX=(W-deviceTotal)/2;
+const deviceY=panelY+65;
+
+ctx.fillStyle="#1c3040";
+ctx.fillRect(deviceX,deviceY,deviceW,deviceH);
+ctx.strokeStyle="#65e6ff";
+ctx.lineWidth=2;
+ctx.strokeRect(deviceX,deviceY,deviceW,deviceH);
+
+ctx.fillStyle="#fff";
+ctx.font="bold 20px system-ui";
+ctx.fillText("📱 MOBILE",deviceX+deviceW/2,deviceY+43);
+
+// Reserved space for future computer option
+ctx.strokeStyle="#263244";
+ctx.strokeRect(
+deviceX+deviceW+gap,
+deviceY,
+deviceW,
+deviceH
+);
+
+ctx.fillStyle="#394355";
+ctx.font="12px system-ui";
+ctx.fillText(
+"COMPUTER",
+deviceX+deviceW+gap+deviceW/2,
+deviceY+40
+);
+
+// Auto shoot
+const autoW=Math.min(300,W-50);
+const autoH=54;
+const autoX=(W-autoW)/2;
+const autoY=deviceY+105;
+
+ctx.fillStyle="#121a28";
+ctx.fillRect(autoX,autoY,autoW,autoH);
+
+ctx.strokeStyle=autoShoot?"#65e6ff":"#394355";
+ctx.lineWidth=2;
+ctx.strokeRect(autoX,autoY,autoW,autoH);
+
+ctx.fillStyle="#d9e2f0";
+ctx.font="bold 15px system-ui";
+ctx.fillText("AUTO SHOOT",autoX+autoW*.30,autoY+34);
+
+ctx.fillStyle=autoShoot?"#55e685":"#7d8799";
+ctx.fillText(autoShoot?"ON":"OFF",autoX+autoW*.76,autoY+34);
+
+ctx.fillStyle="#7d8799";
+ctx.font="11px system-ui";
+ctx.fillText(
+"Automatically targets and fires at the closest enemy.",
+W/2,
+autoY+78
+);
+
+const backW=Math.min(180,W-60);
+const backH=50;
+const backX=(W-backW)/2;
+const backY=panelY+panelH-65;
+
+ctx.fillStyle="#121a28";
+ctx.fillRect(backX,backY,backW,backH);
+
+ctx.strokeStyle="#394355";
+ctx.strokeRect(backX,backY,backW,backH);
+
+ctx.fillStyle="#fff";
+ctx.font="bold 16px system-ui";
+ctx.fillText("BACK",W/2,backY+32);
+
+ctx.textAlign="left";
+
+return;
 
 }
 
@@ -3010,13 +3633,25 @@ return;
 
 updateArena();
 
+ctx.fillStyle="#05070b";
+
+ctx.fillRect(
+0,
+0,
+W,
+H
+);
+
+// Lifted game screen
+const gameBottom=H-118;
+
 ctx.fillStyle="#0b0f17";
 
 ctx.fillRect(
 arena.left,
 arena.top,
 arena.right-arena.left,
-H-arena.top-arena.bottom
+gameBottom-arena.top
 );
 
 
@@ -3037,7 +3672,7 @@ x+=grid
 ctx.beginPath();
 
 ctx.moveTo(x,arena.top);
-ctx.lineTo(x,H-arena.bottom);
+ctx.lineTo(x,gameBottom);
 
 ctx.stroke();
 
@@ -3069,7 +3704,7 @@ ctx.strokeRect(
 arena.left,
 arena.top,
 arena.right-arena.left,
-H-arena.top-arena.bottom
+gameBottom-arena.top
 );
 
 
@@ -3086,6 +3721,20 @@ ctx.fillText(
 28,
 28
 );
+
+if(isBossWave(wave)){
+
+ctx.fillStyle="#ff4f70";
+
+ctx.font="bold 11px system-ui";
+
+ctx.fillText(
+"BOSS WAVE",
+28,
+64
+);
+
+}
 
 ctx.fillStyle="#9aa6b8";
 
@@ -3300,7 +3949,10 @@ ctx.fill();
 
 for(const s of enemyShots){
 
-ctx.fillStyle="#ffb347";
+ctx.fillStyle=
+s.bigBossShot
+?"#ff4f70"
+:"#ffb347";
 
 ctx.beginPath();
 
@@ -3313,6 +3965,14 @@ Math.PI*2
 );
 
 ctx.fill();
+
+if(s.bigBossShot){
+
+ctx.strokeStyle="#fff";
+ctx.lineWidth=2;
+ctx.stroke();
+
+}
 
 }
 
@@ -3346,6 +4006,9 @@ ctx.fill();
 
 for(const e of enemies){
 
+if(e.isBoss){
+
+// Boss body
 ctx.fillStyle=e.color;
 
 ctx.fillRect(
@@ -3355,6 +4018,71 @@ e.r*2,
 e.r*2
 );
 
+// Angry face
+ctx.fillStyle="#111";
+
+// Angry eyebrows
+ctx.lineWidth=6;
+ctx.strokeStyle="#111";
+
+ctx.beginPath();
+ctx.moveTo(e.x-30,e.y-22);
+ctx.lineTo(e.x-7,e.y-12);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(e.x+30,e.y-22);
+ctx.lineTo(e.x+7,e.y-12);
+ctx.stroke();
+
+// Eyes
+ctx.beginPath();
+ctx.arc(e.x-18,e.y-2,8,0,Math.PI*2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(e.x+18,e.y-2,8,0,Math.PI*2);
+ctx.fill();
+
+// Angry mouth
+ctx.beginPath();
+ctx.moveTo(e.x-27,e.y+22);
+ctx.lineTo(e.x,e.y+10);
+ctx.lineTo(e.x+27,e.y+22);
+ctx.lineTo(e.x+20,e.y+30);
+ctx.lineTo(e.x,e.y+20);
+ctx.lineTo(e.x-20,e.y+30);
+ctx.closePath();
+ctx.fill();
+
+// Boss HP bar
+const bw=120;
+const bh=8;
+const bx=e.x-bw/2;
+const by=e.y-e.r-18;
+
+ctx.fillStyle="#222936";
+ctx.fillRect(bx,by,bw,bh);
+
+ctx.fillStyle="#ff4f70";
+ctx.fillRect(
+bx,
+by,
+bw*Math.max(0,e.hp/e.maxHp),
+bh
+);
+
+}
+else{
+
+ctx.fillStyle=e.color;
+
+ctx.fillRect(
+e.x-e.r,
+e.y-e.r,
+e.r*2,
+e.r*2
+);
 
 // LITTLE EYES
 
@@ -3383,6 +4111,8 @@ Math.PI*2
 );
 
 ctx.fill();
+
+}
 
 }
 
