@@ -46,6 +46,7 @@ let H=0;
 let dpr=1;
 
 function resize(){
+
     dpr=Math.min(window.devicePixelRatio||1,2);
 
     W=window.innerWidth;
@@ -79,6 +80,7 @@ let gameBottom=0;
 let controlTop=0;
 
 function updateArena(){
+
     const controlHeight=Math.min(
         185,
         Math.max(150,H*.23)
@@ -100,6 +102,7 @@ function updateArena(){
 ========================================================= */
 
 const player={
+
     x:0,
     y:0,
     r:11,
@@ -122,13 +125,13 @@ const player={
 
     weapon:null,
 
-    /* Scatter Blaster */
+    /* Scatter */
     scatterTier:1,
     scatterPierce:false,
     scatterDamage:20,
     scatterFireRate:1.5,
 
-    /* Fast Pew Pew */
+    /* Fast */
     fastDamageUpgrades:0,
     fastAttackSpeedUpgrades:0,
     fastVelocityUpgrades:0,
@@ -184,6 +187,7 @@ let equippedWeapon=null;
 let settingsOpen=false;
 
 let autoShoot=false;
+let extraInfo=false;
 
 let selectedDevice="mobile";
 
@@ -220,6 +224,7 @@ let moveTouchId=null;
 let aimTouchId=null;
 
 function joystickPos(){
+
     const controlHeight=H-controlTop;
     const controlY=controlTop+controlHeight/2;
 
@@ -233,6 +238,7 @@ function joystickPos(){
 }
 
 function aimJoystickPos(){
+
     const controlHeight=H-controlTop;
     const controlY=controlTop+controlHeight/2;
 
@@ -246,14 +252,19 @@ function aimJoystickPos(){
 }
 
 function resetJoysticks(){
+
     moveTouchId=null;
     aimTouchId=null;
 
     joy.on=false;
+    joy.tx=0;
+    joy.ty=0;
     joy.dx=0;
     joy.dy=0;
 
     aimJoy.on=false;
+    aimJoy.tx=0;
+    aimJoy.ty=0;
     aimJoy.dx=1;
     aimJoy.dy=0;
 }
@@ -324,69 +335,69 @@ function applyEquippedWeapon(){
 
 const scatterTierUpgrades=[
 
-    {
-        tier:2,
-        name:"Scatter Blaster Tier 2",
-        desc:"+1 shot fired. Damage increases from 20 to 30.",
-        apply:()=>{
-            player.scatterTier=2;
-            player.shots=2;
-            player.damage=30;
-            player.scatterDamage=30;
-        }
-    },
-
-    {
-        tier:3,
-        name:"Scatter Blaster Tier 3",
-        desc:"+1 shot fired. Damage increases from 30 to 40.",
-        apply:()=>{
-            player.scatterTier=3;
-            player.shots=3;
-            player.damage=40;
-            player.scatterDamage=40;
-        }
-    },
-
-    {
-        tier:4,
-        name:"Scatter Blaster Tier 4",
-        desc:"+1 shot fired. Damage increases from 40 to 50.",
-        apply:()=>{
-            player.scatterTier=4;
-            player.shots=4;
-            player.damage=50;
-            player.scatterDamage=50;
-        }
-    },
-
-    {
-        tier:5,
-        name:"Scatter Blaster Tier 5",
-        desc:"+1 shot fired. Bullets pierce 1 enemy and lose half their damage.",
-        apply:()=>{
-            player.scatterTier=5;
-            player.shots=5;
-            player.damage=50;
-            player.scatterDamage=50;
-            player.scatterPierce=true;
-        }
-    },
-
-    {
-        tier:6,
-        name:"Scatter Blaster Tier 6",
-        desc:"Fire cooldown decreases from 1.5 seconds to 1 second.",
-        apply:()=>{
-            player.scatterTier=6;
-            player.shots=5;
-            player.damage=50;
-            player.scatterDamage=50;
-            player.scatterFireRate=1;
-            player.fireRate=1;
-            player.scatterPierce=true;
-        }
+{
+    tier:2,
+    name:"Scatter Blaster Tier 2",
+    desc:"+1 shot fired. Damage increases from 20 to 30.",
+    apply:()=>{
+        player.scatterTier=2;
+        player.shots=2;
+        player.damage=30;
+        player.scatterDamage=30;
     }
+},
+
+{
+    tier:3,
+    name:"Scatter Blaster Tier 3",
+    desc:"+1 shot fired. Damage increases from 30 to 40.",
+    apply:()=>{
+        player.scatterTier=3;
+        player.shots=3;
+        player.damage=40;
+        player.scatterDamage=40;
+    }
+},
+
+{
+    tier:4,
+    name:"Scatter Blaster Tier 4",
+    desc:"+1 shot fired. Damage increases from 40 to 50.",
+    apply:()=>{
+        player.scatterTier=4;
+        player.shots=4;
+        player.damage=50;
+        player.scatterDamage=50;
+    }
+},
+
+{
+    tier:5,
+    name:"Scatter Blaster Tier 5",
+    desc:"+1 shot fired. Bullets pierce 1 enemy and lose half their damage.",
+    apply:()=>{
+        player.scatterTier=5;
+        player.shots=5;
+        player.damage=50;
+        player.scatterDamage=50;
+        player.scatterPierce=true;
+    }
+},
+
+{
+    tier:6,
+    name:"Scatter Blaster Tier 6",
+    desc:"Fire cooldown decreases from 1.5 seconds to 1 second.",
+    apply:()=>{
+        player.scatterTier=6;
+        player.shots=5;
+        player.damage=50;
+        player.scatterDamage=50;
+        player.scatterFireRate=1;
+        player.fireRate=1;
+        player.scatterPierce=true;
+    }
+}
 
 ];
 
@@ -397,58 +408,58 @@ const scatterTierUpgrades=[
 
 const fastPewPewUpgrades=[
 
-    {
-        name:"Pew Pew Power",
-        desc:"Increase damage by 50%",
-        apply:()=>{
-            player.damage*=1.5;
-            player.fastDamageUpgrades++;
-        }
-    },
-
-    {
-        name:"Rapid Fire",
-        desc:"Increase attack speed by 25%",
-        apply:()=>{
-            player.fireRate/=1.25;
-            player.fastAttackSpeedUpgrades++;
-        }
-    },
-
-    {
-        name:"Velocity Boost",
-        desc:"Increase projectile velocity by 50%",
-        apply:()=>{
-            player.bulletSpeed*=1.5;
-            player.fastVelocityUpgrades++;
-        }
-    },
-
-    {
-        name:"Ammo Capacity",
-        desc:"Increase maximum ammo by 2",
-        apply:()=>{
-            player.maxAmmo+=2;
-            player.ammo+=2;
-            player.ammo=Math.min(
-                player.ammo,
-                player.maxAmmo
-            );
-            player.ammoCapacityUpgrades++;
-        }
-    },
-
-    {
-        name:"Quick Reload",
-        desc:"Decrease reload time by 0.2 seconds",
-        apply:()=>{
-            player.reloadTime=Math.max(
-                .2,
-                player.reloadTime-.2
-            );
-            player.reloadTimeUpgrades++;
-        }
+{
+    name:"Pew Pew Power",
+    desc:"Increase damage by 50%",
+    apply:()=>{
+        player.damage*=1.5;
+        player.fastDamageUpgrades++;
     }
+},
+
+{
+    name:"Rapid Fire",
+    desc:"Increase attack speed by 25%",
+    apply:()=>{
+        player.fireRate/=1.25;
+        player.fastAttackSpeedUpgrades++;
+    }
+},
+
+{
+    name:"Velocity Boost",
+    desc:"Increase projectile velocity by 50%",
+    apply:()=>{
+        player.bulletSpeed*=1.5;
+        player.fastVelocityUpgrades++;
+    }
+},
+
+{
+    name:"Ammo Capacity",
+    desc:"Increase maximum ammo by 2",
+    apply:()=>{
+        player.maxAmmo+=2;
+        player.ammo+=2;
+        player.ammo=Math.min(
+            player.ammo,
+            player.maxAmmo
+        );
+        player.ammoCapacityUpgrades++;
+    }
+},
+
+{
+    name:"Quick Reload",
+    desc:"Decrease reload time by 0.2 seconds",
+    apply:()=>{
+        player.reloadTime=Math.max(
+            .2,
+            player.reloadTime-.2
+        );
+        player.reloadTimeUpgrades++;
+    }
+}
 
 ];
 
@@ -473,6 +484,7 @@ function getWaveEnemyHealth(w){
 }
 
 function getWaveEnemySpeed(w){
+
     return (
         (35+Math.random()*20)
         *.5
@@ -521,7 +533,9 @@ function reset(){
     updateArena();
 
     player.x=W/2;
-    player.y=arena.top+
+
+    player.y=
+        arena.top+
         (gameBottom-arena.top)/2;
 
     player.hp=100;
@@ -618,30 +632,42 @@ function spawnNormalEnemy(){
     let y;
 
     if(side===0){
+
         x=arena.left-30;
-        y=arena.top+
+
+        y=
+            arena.top+
             Math.random()*
             (gameBottom-arena.top);
     }
 
     if(side===1){
+
         x=arena.right+30;
-        y=arena.top+
+
+        y=
+            arena.top+
             Math.random()*
             (gameBottom-arena.top);
     }
 
     if(side===2){
-        x=arena.left+
+
+        x=
+            arena.left+
             Math.random()*
             (arena.right-arena.left);
+
         y=arena.top-30;
     }
 
     if(side===3){
-        x=arena.left+
+
+        x=
+            arena.left+
             Math.random()*
             (arena.right-arena.left);
+
         y=gameBottom+30;
     }
 
@@ -698,8 +724,9 @@ function spawnBoss(){
 
         r:56,
 
-        hp:1000,
-        maxHp:1000,
+        /* BOSS NOW HAS 20,000 HP */
+        hp:20000,
+        maxHp:20000,
 
         speed:22,
 
@@ -814,6 +841,7 @@ function getClosestEnemy(){
         const d=dx*dx+dy*dy;
 
         if(d<bestD){
+
             bestD=d;
             best=e;
         }
@@ -969,7 +997,7 @@ function fireScatter(){
 
 
 /* =========================================================
-   TOUCH JOYSTICK HELPERS
+   TOUCH HELPERS
 ========================================================= */
 
 function setJoystick(j,touch){
@@ -1077,23 +1105,20 @@ function getMenuButtonRect(index){
         y=H/2+120;
     }
 
-    return {
+    return{
         x:x,
         y:y,
         w:bw,
-        h:
-            index===0
-            ?60
-            :bh
+        h:index===0?60:bh
     };
 }
 
 function getSettingsPanel(){
 
     const panelW=Math.min(560,W-28);
-    const panelH=Math.min(430,H-30);
+    const panelH=Math.min(470,H-30);
 
-    return {
+    return{
         x:(W-panelW)/2,
         y:(H-panelH)/2,
         w:panelW,
@@ -1128,7 +1153,7 @@ function getDeviceRects(){
         p.x+
         (p.w-total)/2;
 
-    return {
+    return{
 
         mobile:{
             x:x,
@@ -1150,9 +1175,21 @@ function getAutoShootRect(){
 
     const p=getSettingsPanel();
 
-    return {
+    return{
         x:p.x+22,
         y:p.y+175,
+        w:p.w-44,
+        h:58
+    };
+}
+
+function getExtraInfoRect(){
+
+    const p=getSettingsPanel();
+
+    return{
+        x:p.x+22,
+        y:p.y+245,
         w:p.w-44,
         h:58
     };
@@ -1162,7 +1199,7 @@ function getBackRect(){
 
     const p=getSettingsPanel();
 
-    return {
+    return{
         x:p.x+22,
         y:p.y+p.h-70,
         w:p.w-44,
@@ -1181,27 +1218,28 @@ function getWeaponCardRects(){
         const gap=12;
 
         const total=h*2+gap;
+
         const startY=
             Math.max(
                 120,
                 (H-total)/2
             );
 
-        return [
+        return[
 
-            {
-                x:(W-w)/2,
-                y:startY,
-                w:w,
-                h:h
-            },
+        {
+            x:(W-w)/2,
+            y:startY,
+            w:w,
+            h:h
+        },
 
-            {
-                x:(W-w)/2,
-                y:startY+h+gap,
-                w:w,
-                h:h
-            }
+        {
+            x:(W-w)/2,
+            y:startY+h+gap,
+            w:w,
+            h:h
+        }
 
         ];
     }
@@ -1221,28 +1259,28 @@ function getWeaponCardRects(){
     const startX=(W-total)/2;
     const y=(H-h)/2+15;
 
-    return [
+    return[
 
-        {
-            x:startX,
-            y:y,
-            w:w,
-            h:h
-        },
+    {
+        x:startX,
+        y:y,
+        w:w,
+        h:h
+    },
 
-        {
-            x:startX+w+gap,
-            y:y,
-            w:w,
-            h:h
-        }
+    {
+        x:startX+w+gap,
+        y:y,
+        w:w,
+        h:h
+    }
 
     ];
 }
 
 function pointInRect(x,y,r){
 
-    return (
+    return(
         x>=r.x &&
         x<=r.x+r.w &&
         y>=r.y &&
@@ -1251,7 +1289,6 @@ function pointInRect(x,y,r){
 }
 
 function pointInCard(x,y,card){
-
     return pointInRect(x,y,card);
 }
 
@@ -1262,16 +1299,12 @@ function getUpgradeCardRects(){
         const w=Math.min(430,W-40);
         const h=190;
 
-        return [
-
-            {
-                x:(W-w)/2,
-                y:(H-h)/2,
-                w:w,
-                h:h
-            }
-
-        ];
+        return[{
+            x:(W-w)/2,
+            y:(H-h)/2,
+            w:w,
+            h:h
+        }];
     }
 
     const portrait=H>W;
@@ -1290,21 +1323,21 @@ function getUpgradeCardRects(){
                 (H-total)/2
             );
 
-        return [
+        return[
 
-            {
-                x:(W-w)/2,
-                y:startY,
-                w:w,
-                h:h
-            },
+        {
+            x:(W-w)/2,
+            y:startY,
+            w:w,
+            h:h
+        },
 
-            {
-                x:(W-w)/2,
-                y:startY+h+gap,
-                w:w,
-                h:h
-            }
+        {
+            x:(W-w)/2,
+            y:startY+h+gap,
+            w:w,
+            h:h
+        }
 
         ];
     }
@@ -1323,27 +1356,26 @@ function getUpgradeCardRects(){
 
     const startX=(W-total)/2;
 
-    return [
+    return[
 
-        {
-            x:startX,
-            y:(H-h)/2,
-            w:w,
-            h:h
-        },
+    {
+        x:startX,
+        y:(H-h)/2,
+        w:w,
+        h:h
+    },
 
-        {
-            x:startX+w+gap,
-            y:(H-h)/2,
-            w:w,
-            h:h
-        }
+    {
+        x:startX+w+gap,
+        y:(H-h)/2,
+        w:w,
+        h:h
+    }
 
     ];
 }
 
 function pointInUpgradeCard(x,y,card){
-
     return pointInRect(x,y,card);
 }
 
@@ -1485,9 +1517,10 @@ function update(dt){
         return;
     }
 
-    /* ---------------------------------------------
+
+    /* =====================================================
        MOVEMENT
-    --------------------------------------------- */
+    ===================================================== */
 
     let mx=joy.dx;
     let my=joy.dy;
@@ -1520,15 +1553,15 @@ function update(dt){
     );
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        AIM
-    --------------------------------------------- */
+    ===================================================== */
 
     if(aimJoy.on){
 
         if(
-            Math.abs(aimJoy.dx)>0.01 ||
-            Math.abs(aimJoy.dy)>0.01
+            Math.abs(aimJoy.dx)>.01 ||
+            Math.abs(aimJoy.dy)>.01
         ){
 
             player.aimTarget=
@@ -1571,54 +1604,71 @@ function update(dt){
         );
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        WAVE BREAK
-    --------------------------------------------- */
+       
+       IMPORTANT:
+       We DO NOT return here anymore.
+       Projectiles continue moving and expiring.
+    ===================================================== */
+
+    let waveBreaking=false;
 
     if(waveBreakTimer>0){
 
         waveBreakTimer-=dt;
 
+        waveBreaking=true;
+
         if(waveBreakTimer<=0){
+
+            waveBreakTimer=0;
+
             startWave();
-        }
 
-        return;
+            waveBreaking=false;
+        }
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        SPAWNING
-    --------------------------------------------- */
+    ===================================================== */
 
-    if(waveSpawned<waveTotal){
+    if(!waveBreaking){
 
-        waveSpawnTimer-=dt;
+        if(waveSpawned<waveTotal){
 
-        if(waveSpawnTimer<=0){
+            waveSpawnTimer-=dt;
 
-            if(
-                isBossWave(wave) &&
-                waveSpawned===
-                waveTotal-1
-            ){
-                spawnBoss();
+            if(waveSpawnTimer<=0){
+
+                if(
+                    isBossWave(wave) &&
+                    waveSpawned===
+                    waveTotal-1
+                ){
+
+                    spawnBoss();
+
+                }
+                else{
+
+                    spawnNormalEnemy();
+                }
+
+                waveSpawned++;
+
+                waveSpawnTimer=
+                    getWaveSpawnSpeed(wave);
             }
-            else{
-                spawnNormalEnemy();
-            }
-
-            waveSpawned++;
-
-            waveSpawnTimer=
-                getWaveSpawnSpeed(wave);
         }
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        FAST RELOAD
-    --------------------------------------------- */
+    ===================================================== */
 
     if(player.reloading){
 
@@ -1634,148 +1684,156 @@ function update(dt){
     }
 
 
-    /* ---------------------------------------------
-       AUTO SHOOT
-    --------------------------------------------- */
+    /* =====================================================
+       SHOOTING
+    ===================================================== */
 
-    if(autoShoot){
+    if(!waveBreaking){
 
-        if(player.weapon==="fast"){
+        if(autoShoot){
 
-            if(!player.reloading){
+            if(player.weapon==="fast"){
+
+                if(!player.reloading){
+                    fireFast();
+                }
+
+            }
+            else if(player.weapon==="scatter"){
+
+                fireScatter();
+
+            }
+            else{
+
+                fireBase();
+            }
+        }
+
+        shoot-=dt;
+
+
+        if(aimJoy.on){
+
+            if(player.weapon==="fast"){
                 fireFast();
             }
+            else if(player.weapon==="scatter"){
+                fireScatter();
+            }
+            else{
+                fireBase();
+            }
         }
-        else if(player.weapon==="scatter"){
+    }
+    else{
 
-            fireScatter();
-        }
-        else{
+        /*
+           Cooldown still ticks during wave breaks.
+           This prevents weapons from feeling frozen.
+        */
 
-            fireBase();
-        }
+        shoot-=dt;
     }
 
 
-    shoot-=dt;
-
-
-    /* ---------------------------------------------
-       MANUAL SHOOT
-    --------------------------------------------- */
-
-    if(aimJoy.on){
-
-        if(player.weapon==="fast"){
-            fireFast();
-        }
-        else if(player.weapon==="scatter"){
-            fireScatter();
-        }
-        else{
-            fireBase();
-        }
-    }
-
-
-    /* ---------------------------------------------
+    /* =====================================================
        ENEMIES
-    --------------------------------------------- */
+    ===================================================== */
 
-    for(const e of enemies){
+    if(!waveBreaking){
 
-        const dx=player.x-e.x;
-        const dy=player.y-e.y;
+        for(const e of enemies){
 
-        const d=Math.hypot(dx,dy);
+            const dx=player.x-e.x;
+            const dy=player.y-e.y;
 
-        if(d>0){
+            const d=Math.hypot(dx,dy);
 
-            e.x+=
-                dx/d*
-                e.speed*
-                dt;
+            if(d>0){
 
-            e.y+=
-                dy/d*
-                e.speed*
-                dt;
-        }
+                e.x+=
+                    dx/d*
+                    e.speed*
+                    dt;
 
-
-        /* Normal enemy attacks */
-
-        if(!e.isBoss){
-
-            e.shoot-=dt;
-
-            if(e.shoot<=0){
-
-                enemyFireAtPlayer(e);
-
-                e.shoot=
-                    1+
-                    Math.random()*2;
-            }
-        }
-
-
-        /* Boss attacks */
-
-        if(e.isBoss){
-
-            const attackMultiplier=
-                e.hp<=250
-                ?2
-                :1;
-
-            e.radialShoot-=dt;
-
-            if(e.radialShoot<=0){
-
-                bossRadialFire(e);
-
-                e.radialShoot=
-                    5/
-                    attackMultiplier;
+                e.y+=
+                    dy/d*
+                    e.speed*
+                    dt;
             }
 
-            e.bigShoot-=dt;
 
-            if(e.bigShoot<=0){
+            if(!e.isBoss){
 
-                bossBigFire(e);
+                e.shoot-=dt;
 
-                e.bigShoot=
-                    2.5/
-                    attackMultiplier;
+                if(e.shoot<=0){
+
+                    enemyFireAtPlayer(e);
+
+                    e.shoot=
+                        1+
+                        Math.random()*2;
+                }
             }
-        }
 
 
-        /* Player collision */
+            if(e.isBoss){
 
-        const pdx=player.x-e.x;
-        const pdy=player.y-e.y;
+                const attackMultiplier=
+                    e.hp<=5000
+                    ?2
+                    :1;
 
-        const pd=
-            Math.hypot(pdx,pdy);
+                e.radialShoot-=dt;
 
-        if(
-            pd<
-            player.r+e.r
-        ){
+                if(e.radialShoot<=0){
 
-            player.hp-=
-                (e.isBoss?25:18)*
-                dt;
+                    bossRadialFire(e);
+
+                    e.radialShoot=
+                        5/
+                        attackMultiplier;
+                }
+
+                e.bigShoot-=dt;
+
+                if(e.bigShoot<=0){
+
+                    bossBigFire(e);
+
+                    e.bigShoot=
+                        2.5/
+                        attackMultiplier;
+                }
+            }
+
+
+            const pdx=player.x-e.x;
+            const pdy=player.y-e.y;
+
+            const pd=
+                Math.hypot(pdx,pdy);
+
+            if(
+                pd<
+                player.r+e.r
+            ){
+
+                player.hp-=
+                    (e.isBoss?25:18)*
+                    dt;
+            }
         }
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        PLAYER SHOTS
-    --------------------------------------------- */
+       
+       These ALWAYS update, including wave breaks.
+    ===================================================== */
 
     for(const s of shots){
 
@@ -1783,6 +1841,10 @@ function update(dt){
         s.y+=s.vy*dt;
 
         s.life-=dt;
+
+        if(waveBreaking){
+            continue;
+        }
 
         for(const e of enemies){
 
@@ -1808,6 +1870,7 @@ function update(dt){
                     s.pierceLeft--;
 
                     s.damage*=.5;
+
                 }
                 else{
 
@@ -1857,9 +1920,11 @@ function update(dt){
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        ENEMY SHOTS
-    --------------------------------------------- */
+       
+       These ALWAYS update, including wave breaks.
+    ===================================================== */
 
     for(const s of enemyShots){
 
@@ -1867,6 +1932,10 @@ function update(dt){
         s.y+=s.vy*dt;
 
         s.life-=dt;
+
+        if(waveBreaking){
+            continue;
+        }
 
         const dx=
             player.x-s.x;
@@ -1889,14 +1958,9 @@ function update(dt){
     }
 
 
-    /* ---------------------------------------------
-       REMOVE DEAD ENEMIES
-    --------------------------------------------- */
-
-    enemies=
-        enemies.filter(
-            e=>e.hp>0
-        );
+    /* =====================================================
+       CLEANUP
+    ===================================================== */
 
     shots=
         shots.filter(
@@ -1919,9 +1983,18 @@ function update(dt){
         );
 
 
-    /* ---------------------------------------------
-       XP ORBS
-    --------------------------------------------- */
+    if(!waveBreaking){
+
+        enemies=
+            enemies.filter(
+                e=>e.hp>0
+            );
+    }
+
+
+    /* =====================================================
+       ORBS
+    ===================================================== */
 
     for(const o of orbs){
 
@@ -1936,8 +2009,7 @@ function update(dt){
             if(d>0){
 
                 const pull=
-                    d<
-                    18
+                    d<18
                     ?500
                     :220;
 
@@ -1959,7 +2031,10 @@ function update(dt){
         const pd=
             Math.hypot(pdx,pdy);
 
-        if(pd<player.r+o.r+4){
+        if(
+            pd<
+            player.r+o.r+4
+        ){
 
             xp+=o.value;
 
@@ -1973,48 +2048,51 @@ function update(dt){
         );
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        LEVEL UP
-    --------------------------------------------- */
+    ===================================================== */
 
-    while(xp>=xpNext){
+    if(!waveBreaking){
 
-        xp-=xpNext;
+        while(xp>=xpNext){
 
-        level++;
+            xp-=xpNext;
 
-        xpNext=
-            Math.floor(
-                xpNext*1.25
-            );
+            level++;
 
-        if(level===2){
+            xpNext=
+                Math.floor(
+                    xpNext*1.25
+                );
 
-            if(!equippedWeapon){
+            if(level===2){
 
-                openWeaponChoice();
+                if(!equippedWeapon){
 
+                    openWeaponChoice();
+
+                }
+                else{
+
+                    openUpgrades();
+                }
+
+                return;
             }
-            else{
+
+            if(level>2){
 
                 openUpgrades();
+
+                return;
             }
-
-            return;
-        }
-
-        if(level>2){
-
-            openUpgrades();
-
-            return;
         }
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        GAME OVER
-    --------------------------------------------- */
+    ===================================================== */
 
     if(player.hp<=0){
 
@@ -2024,11 +2102,12 @@ function update(dt){
     }
 
 
-    /* ---------------------------------------------
+    /* =====================================================
        WAVE COMPLETE
-    --------------------------------------------- */
+    ===================================================== */
 
     if(
+        !waveBreaking &&
         waveSpawned>=waveTotal &&
         enemies.length===0
     ){
@@ -2042,7 +2121,12 @@ function update(dt){
    DRAW HELPERS
 ========================================================= */
 
-function rect(x,y,w,h,fill,stroke=null,lw=1){
+function rect(
+    x,y,w,h,
+    fill,
+    stroke=null,
+    lw=1
+){
 
     ctx.fillStyle=fill;
 
@@ -2067,7 +2151,14 @@ function rect(x,y,w,h,fill,stroke=null,lw=1){
     }
 }
 
-function text(t,x,y,size,fill="#fff",align="left"){
+function text(
+    t,
+    x,
+    y,
+    size,
+    fill="#fff",
+    align="left"
+){
 
     ctx.fillStyle=fill;
 
@@ -2084,12 +2175,23 @@ function text(t,x,y,size,fill="#fff",align="left"){
     );
 }
 
-function wrapText(t,x,y,maxWidth,lineHeight){
+function wrapText(
+    t,
+    x,
+    y,
+    maxWidth,
+    lineHeight
+){
 
     const words=t.split(" ");
+
     let line="";
 
-    for(let n=0;n<words.length;n++){
+    for(
+        let n=0;
+        n<words.length;
+        n++
+    ){
 
         const test=
             line+
@@ -2113,6 +2215,7 @@ function wrapText(t,x,y,maxWidth,lineHeight){
                 " ";
 
             y+=lineHeight;
+
         }
         else{
 
@@ -2129,10 +2232,13 @@ function wrapText(t,x,y,maxWidth,lineHeight){
 
 
 /* =========================================================
-   PIXEL ICONS
+   ICONS
 ========================================================= */
 
-function drawPhoneIcon(x,y,scale=1){
+function drawPhoneIcon(
+    x,y,
+    scale=1
+){
 
     ctx.save();
 
@@ -2167,7 +2273,10 @@ function drawPhoneIcon(x,y,scale=1){
     ctx.restore();
 }
 
-function drawMonitorIcon(x,y,scale=1){
+function drawMonitorIcon(
+    x,y,
+    scale=1
+){
 
     ctx.save();
 
@@ -2216,19 +2325,24 @@ function drawMonitorIcon(x,y,scale=1){
 
 
 /* =========================================================
-   MENU DRAW
+   MENU
 ========================================================= */
 
 function drawMenu(){
 
     ctx.fillStyle="#080a10";
-    ctx.fillRect(0,0,W,H);
 
-    /* subtle pixel grid */
+    ctx.fillRect(
+        0,0,W,H
+    );
 
     ctx.globalAlpha=.12;
 
-    for(let x=0;x<W;x+=24){
+    for(
+        let x=0;
+        x<W;
+        x+=24
+    ){
 
         ctx.fillStyle="#263044";
 
@@ -2240,7 +2354,11 @@ function drawMenu(){
         );
     }
 
-    for(let y=0;y<H;y+=24){
+    for(
+        let y=0;
+        y<H;
+        y+=24
+    ){
 
         ctx.fillStyle="#263044";
 
@@ -2254,8 +2372,6 @@ function drawMenu(){
 
     ctx.globalAlpha=1;
 
-
-    /* Logo glow */
 
     ctx.save();
 
@@ -2327,7 +2443,6 @@ function drawMenu(){
         );
     }
 
-
     text(
         "v1.0",
         W-14,
@@ -2338,7 +2453,11 @@ function drawMenu(){
     );
 }
 
-function drawMenuButton(r,label,primary){
+function drawMenuButton(
+    r,
+    label,
+    primary
+){
 
     const fill=
         primary
@@ -2359,8 +2478,6 @@ function drawMenuButton(r,label,primary){
         stroke,
         2
     );
-
-    /* pixel highlight */
 
     rect(
         r.x+3,
@@ -2386,7 +2503,7 @@ function drawMenuButton(r,label,primary){
 
 
 /* =========================================================
-   SETTINGS DRAW
+   SETTINGS
 ========================================================= */
 
 function drawSettings(){
@@ -2394,7 +2511,10 @@ function drawSettings(){
     drawMenu();
 
     ctx.fillStyle="rgba(0,0,0,.62)";
-    ctx.fillRect(0,0,W,H);
+
+    ctx.fillRect(
+        0,0,W,H
+    );
 
     const p=getSettingsPanel();
 
@@ -2433,7 +2553,8 @@ function drawSettings(){
     );
 
 
-    const devices=getDeviceRects();
+    const devices=
+        getDeviceRects();
 
     drawDeviceButton(
         devices.mobile,
@@ -2450,82 +2571,36 @@ function drawSettings(){
     );
 
 
-    const auto=getAutoShootRect();
+    /* AUTO SHOOT */
 
-    rect(
-        auto.x,
-        auto.y,
-        auto.w,
-        auto.h,
-        "#101a23",
-        "#334654",
-        2
-    );
+    const auto=
+        getAutoShootRect();
 
-    text(
+    drawSettingsToggle(
+        auto,
         "AUTO SHOOT",
-        auto.x+18,
-        auto.y+18,
-        14,
-        "#dbeaf0"
-    );
-
-    text(
         "Automatically targets the nearest enemy",
-        auto.x+18,
-        auto.y+40,
-        10,
-        "#687d8b"
+        autoShoot
     );
 
-    const toggleW=48;
-    const toggleH=26;
 
-    const tx=
-        auto.x+
-        auto.w-
-        toggleW-
-        18;
+    /* EXTRA INFO */
 
-    const ty=
-        auto.y+
-        (auto.h-toggleH)/2;
+    const info=
+        getExtraInfoRect();
 
-    rect(
-        tx,
-        ty,
-        toggleW,
-        toggleH,
-        autoShoot
-        ?"#214f5a"
-        :"#1b252d",
-        autoShoot
-        ?"#57e9ff"
-        :"#40505c",
-        2
+    drawSettingsToggle(
+        info,
+        "EXTRA INFO",
+        "Show detailed player and weapon stats",
+        extraInfo
     );
 
-    ctx.fillStyle=
-        autoShoot
-        ?"#8ff5ff"
-        :"#71808a";
 
-    ctx.beginPath();
+    /* BACK */
 
-    ctx.arc(
-        autoShoot
-        ?tx+toggleW-13
-        :tx+13,
-        ty+toggleH/2,
-        7,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    const back=getBackRect();
+    const back=
+        getBackRect();
 
     rect(
         back.x,
@@ -2547,7 +2622,92 @@ function drawSettings(){
     );
 }
 
-function drawDeviceButton(r,label,active,selected){
+function drawSettingsToggle(
+    r,
+    title,
+    subtitle,
+    value
+){
+
+    rect(
+        r.x,
+        r.y,
+        r.w,
+        r.h,
+        "#101a23",
+        "#334654",
+        2
+    );
+
+    text(
+        title,
+        r.x+18,
+        r.y+18,
+        14,
+        "#dbeaf0"
+    );
+
+    text(
+        subtitle,
+        r.x+18,
+        r.y+40,
+        10,
+        "#687d8b"
+    );
+
+    const toggleW=48;
+    const toggleH=26;
+
+    const tx=
+        r.x+
+        r.w-
+        toggleW-
+        18;
+
+    const ty=
+        r.y+
+        (r.h-toggleH)/2;
+
+    rect(
+        tx,
+        ty,
+        toggleW,
+        toggleH,
+        value
+        ?"#214f5a"
+        :"#1b252d",
+        value
+        ?"#57e9ff"
+        :"#40505c",
+        2
+    );
+
+    ctx.fillStyle=
+        value
+        ?"#8ff5ff"
+        :"#71808a";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        value
+        ?tx+toggleW-13
+        :tx+13,
+        ty+toggleH/2,
+        7,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+}
+
+function drawDeviceButton(
+    r,
+    label,
+    active,
+    selected
+){
 
     rect(
         r.x,
@@ -2570,6 +2730,7 @@ function drawDeviceButton(r,label,active,selected){
             r.y+r.h/2,
             .55
         );
+
     }
     else{
 
@@ -2605,13 +2766,16 @@ function drawDeviceButton(r,label,active,selected){
 
 
 /* =========================================================
-   LOADOUT DRAW
+   LOADOUT
 ========================================================= */
 
 function drawLoadout(){
 
     ctx.fillStyle="#080a10";
-    ctx.fillRect(0,0,W,H);
+
+    ctx.fillRect(
+        0,0,W,H
+    );
 
     text(
         "WEAPONS",
@@ -2631,7 +2795,8 @@ function drawLoadout(){
         "center"
     );
 
-    const cards=getWeaponCardRects();
+    const cards=
+        getWeaponCardRects();
 
     drawWeaponCard(
         cards[0],
@@ -2670,7 +2835,10 @@ function drawLoadout(){
     );
 }
 
-function drawWeaponCard(r,index){
+function drawWeaponCard(
+    r,
+    index
+){
 
     const scatter=index===0;
 
@@ -2803,21 +2971,16 @@ function drawWeaponCard(r,index){
 
 
 /* =========================================================
-   ARENA DRAW
+   ARENA
 ========================================================= */
 
 function drawArena(){
 
     ctx.fillStyle="#080c12";
+
     ctx.fillRect(
-        0,
-        0,
-        W,
-        H
+        0,0,W,H
     );
-
-
-    /* arena */
 
     rect(
         arena.left,
@@ -2827,8 +2990,6 @@ function drawArena(){
         "#0b1118"
     );
 
-
-    /* grid */
 
     ctx.save();
 
@@ -2855,8 +3016,17 @@ function drawArena(){
     ){
 
         ctx.beginPath();
-        ctx.moveTo(x,arena.top);
-        ctx.lineTo(x,gameBottom);
+
+        ctx.moveTo(
+            x,
+            arena.top
+        );
+
+        ctx.lineTo(
+            x,
+            gameBottom
+        );
+
         ctx.stroke();
     }
 
@@ -2867,15 +3037,22 @@ function drawArena(){
     ){
 
         ctx.beginPath();
-        ctx.moveTo(arena.left,y);
-        ctx.lineTo(arena.right,y);
+
+        ctx.moveTo(
+            arena.left,
+            y
+        );
+
+        ctx.lineTo(
+            arena.right,
+            y
+        );
+
         ctx.stroke();
     }
 
     ctx.restore();
 
-
-    /* border */
 
     ctx.strokeStyle="#263742";
     ctx.lineWidth=2;
@@ -2887,8 +3064,6 @@ function drawArena(){
         gameBottom-arena.top
     );
 
-
-    /* control strip */
 
     rect(
         0,
@@ -2953,9 +3128,8 @@ function drawHUD(){
     }
 
 
-    /* HP */
-
     const barX=120;
+
     const barW=
         Math.max(
             100,
@@ -2986,8 +3160,6 @@ function drawHUD(){
         "#d84962"
     );
 
-
-    /* XP */
 
     const xpY=31;
 
@@ -3020,8 +3192,6 @@ function drawHUD(){
         "right"
     );
 
-
-    /* weapon */
 
     if(player.weapon==="scatter"){
 
@@ -3112,6 +3282,176 @@ function drawHUD(){
             );
         }
     }
+
+
+    /* =====================================================
+       EXTRA INFO PANEL
+    ===================================================== */
+
+    if(extraInfo){
+
+        drawExtraInfo();
+    }
+}
+
+
+/* =========================================================
+   EXTRA INFO
+========================================================= */
+
+function drawExtraInfo(){
+
+    const narrow=W<430;
+
+    const panelW=
+        Math.min(
+            245,
+            W-28
+        );
+
+    const panelH=
+        player.weapon==="fast"
+        ?145
+        :125;
+
+    const x=
+        W-panelW-14;
+
+    const y=
+        86;
+
+    rect(
+        x,
+        y,
+        panelW,
+        panelH,
+        "rgba(9,15,21,.94)",
+        "#344954",
+        2
+    );
+
+    rect(
+        x+2,
+        y+2,
+        panelW-4,
+        3,
+        "#24515d"
+    );
+
+    text(
+        "EXTRA INFO",
+        x+12,
+        y+17,
+        10,
+        "#57e9ff"
+    );
+
+    text(
+        "WAVE "+wave+
+        "   LV "+level,
+        x+12,
+        y+35,
+        10,
+        "#d5e5eb"
+    );
+
+    text(
+        "XP "+Math.floor(xp)+
+        " / "+Math.floor(xpNext),
+        x+12,
+        y+51,
+        9,
+        "#8298a4"
+    );
+
+
+    if(player.weapon==="scatter"){
+
+        text(
+            "SCATTER BLASTER",
+            x+12,
+            y+69,
+            10,
+            "#e0edf1"
+        );
+
+        text(
+            "DMG "+Math.round(player.damage)+
+            "   SHOTS "+player.shots,
+            x+12,
+            y+86,
+            9,
+            "#8298a4"
+        );
+
+        text(
+            "COOLDOWN "+
+            player.scatterFireRate.toFixed(2)+
+            "s",
+            x+12,
+            y+102,
+            9,
+            "#8298a4"
+        );
+
+        text(
+            "VELOCITY "+
+            Math.round(player.bulletSpeed),
+            x+12,
+            y+118,
+            9,
+            "#8298a4"
+        );
+
+    }
+    else if(player.weapon==="fast"){
+
+        text(
+            "FAST PEW PEW",
+            x+12,
+            y+69,
+            10,
+            "#e0edf1"
+        );
+
+        text(
+            "DMG "+Math.round(player.damage)+
+            "   SHOTS "+player.shots,
+            x+12,
+            y+86,
+            9,
+            "#8298a4"
+        );
+
+        text(
+            "COOLDOWN "+
+            player.fireRate.toFixed(3)+
+            "s",
+            x+12,
+            y+102,
+            9,
+            "#8298a4"
+        );
+
+        text(
+            "VELOCITY "+
+            Math.round(player.bulletSpeed),
+            x+12,
+            y+118,
+            9,
+            "#8298a4"
+        );
+
+        text(
+            "RELOAD "+
+            player.reloadTime.toFixed(1)+
+            "s",
+            x+12,
+            y+134,
+            9,
+            "#8298a4"
+        );
+    }
 }
 
 
@@ -3148,16 +3488,56 @@ function drawOrbs(){
 
 
 /* =========================================================
-   ENEMY DRAW
+   ENEMIES
 ========================================================= */
+
+function drawEnemyHPBar(e){
+
+    const width=
+        e.isBoss
+        ?130
+        :30;
+
+    const height=
+        e.isBoss
+        ?8
+        :4;
+
+    const y=
+        e.y-
+        e.r-
+        (e.isBoss?15:9);
+
+    rect(
+        e.x-width/2,
+        y,
+        width,
+        height,
+        "#171b20",
+        "#3c4850",
+        1
+    );
+
+    rect(
+        e.x-width/2,
+        y,
+        width*
+        Math.max(
+            0,
+            e.hp/e.maxHp
+        ),
+        height,
+        e.isBoss
+        ?"#ff5265"
+        :"#65df83"
+    );
+}
 
 function drawEnemies(){
 
     for(const e of enemies){
 
         if(e.isBoss){
-
-            /* boss glow */
 
             ctx.save();
 
@@ -3176,8 +3556,6 @@ function drawEnemies(){
 
             ctx.restore();
 
-
-            /* boss face */
 
             ctx.fillStyle="#190b0e";
 
@@ -3202,32 +3580,7 @@ function drawEnemies(){
                 6
             );
 
-
-            /* boss hp */
-
-            const bw=130;
-
-            rect(
-                e.x-bw/2,
-                e.y-e.r-15,
-                bw,
-                8,
-                "#171b20",
-                "#46515a",
-                1
-            );
-
-            rect(
-                e.x-bw/2,
-                e.y-e.r-15,
-                bw*
-                Math.max(
-                    0,
-                    e.hp/e.maxHp
-                ),
-                8,
-                "#ff5265"
-            );
+            drawEnemyHPBar(e);
 
         }
         else{
@@ -3241,8 +3594,6 @@ function drawEnemies(){
                 "#ffc1ca",
                 1
             );
-
-            /* eyes */
 
             rect(
                 e.x-7,
@@ -3260,8 +3611,6 @@ function drawEnemies(){
                 "#180d12"
             );
 
-            /* mouth */
-
             rect(
                 e.x-6,
                 e.y+5,
@@ -3269,13 +3618,17 @@ function drawEnemies(){
                 3,
                 "#180d12"
             );
+
+            /* NEW: normal enemy HP bar */
+
+            drawEnemyHPBar(e);
         }
     }
 }
 
 
 /* =========================================================
-   SHOTS DRAW
+   SHOTS
 ========================================================= */
 
 function drawShots(){
@@ -3296,18 +3649,8 @@ function drawShots(){
 
         ctx.fillStyle=
             s.bigBossShot
-            ?"ff6b9a"
+            ?"#ff6b9a"
             :"#ff9a4a";
-
-        if(s.bossShot){
-
-            ctx.fillStyle="#ff9a4a";
-        }
-
-        if(s.bigBossShot){
-
-            ctx.fillStyle="#ff6b9a";
-        }
 
         ctx.beginPath();
 
@@ -3325,7 +3668,7 @@ function drawShots(){
 
 
 /* =========================================================
-   PLAYER DRAW
+   PLAYER
 ========================================================= */
 
 function drawPlayer(){
@@ -3352,8 +3695,6 @@ function drawPlayer(){
     ctx.restore();
 
 
-    /* aim arrow */
-
     ctx.save();
 
     ctx.translate(
@@ -3370,6 +3711,7 @@ function drawPlayer(){
     ctx.moveTo(17,0);
     ctx.lineTo(5,-4);
     ctx.lineTo(5,4);
+
     ctx.closePath();
 
     ctx.fill();
@@ -3379,17 +3721,12 @@ function drawPlayer(){
 
 
 /* =========================================================
-   JOYSTICK DRAW
+   JOYSTICKS
 ========================================================= */
 
 function drawJoystick(j){
 
     ctx.save();
-
-    /*
-       FIXED BLACK-SCREEN BUG:
-       This must use a normal ternary expression.
-    */
 
     ctx.globalAlpha=
         j.on
@@ -3437,10 +3774,6 @@ function drawAimJoystick(){
 
     ctx.save();
 
-    /*
-       Same corrected ternary syntax here.
-    */
-
     ctx.globalAlpha=
         aimJoy.on
         ? .35
@@ -3485,12 +3818,12 @@ function drawAimJoystick(){
 
 
 /* =========================================================
-   PAUSE BUTTON
+   PAUSE
 ========================================================= */
 
 function getPauseRect(){
 
-    return {
+    return{
         x:W-62,
         y:arena.top+10,
         w:46,
@@ -3531,16 +3864,15 @@ function drawPauseButton(){
 
 
 /* =========================================================
-   WEAPON CHOICE OVERLAY
+   WEAPON CHOICE
 ========================================================= */
 
 function drawWeaponChoice(){
 
     ctx.fillStyle="rgba(0,0,0,.72)";
+
     ctx.fillRect(
-        0,
-        0,
-        W,H
+        0,0,W,H
     );
 
     text(
@@ -3561,7 +3893,8 @@ function drawWeaponChoice(){
         "center"
     );
 
-    const cards=getWeaponCardRects();
+    const cards=
+        getWeaponCardRects();
 
     drawWeaponCard(
         cards[0],
@@ -3576,16 +3909,15 @@ function drawWeaponChoice(){
 
 
 /* =========================================================
-   UPGRADE OVERLAY
+   UPGRADE
 ========================================================= */
 
 function drawUpgradeOverlay(){
 
     ctx.fillStyle="rgba(0,0,0,.74)";
+
     ctx.fillRect(
-        0,
-        0,
-        W,H
+        0,0,W,H
     );
 
     text(
@@ -3606,7 +3938,8 @@ function drawUpgradeOverlay(){
         "center"
     );
 
-    const cards=getUpgradeCardRects();
+    const cards=
+        getUpgradeCardRects();
 
     for(
         let i=0;
@@ -3664,9 +3997,6 @@ function drawUpgradeCard(r,u){
         18
     );
 
-
-    /* selection hint */
-
     text(
         "TAP TO SELECT",
         r.x+r.w-15,
@@ -3685,10 +4015,9 @@ function drawUpgradeCard(r,u){
 function drawPaused(){
 
     ctx.fillStyle="rgba(0,0,0,.55)";
+
     ctx.fillRect(
-        0,
-        0,
-        W,H
+        0,0,W,H
     );
 
     text(
@@ -3718,10 +4047,9 @@ function drawPaused(){
 function drawGameOver(){
 
     ctx.fillStyle="rgba(0,0,0,.72)";
+
     ctx.fillRect(
-        0,
-        0,
-        W,H
+        0,0,W,H
     );
 
     text(
@@ -3819,11 +4147,6 @@ function drawGame(){
     }
 }
 
-
-/* =========================================================
-   DRAW
-========================================================= */
-
 function draw(){
 
     if(!started){
@@ -3851,7 +4174,7 @@ function draw(){
 
 
 /* =========================================================
-   TOUCH INPUT
+   TOUCH START
 ========================================================= */
 
 c.addEventListener(
@@ -3866,9 +4189,7 @@ c.addEventListener(
             const y=touch.clientY;
 
 
-            /* -----------------------------------------
-               MENU
-            ----------------------------------------- */
+            /* MENU */
 
             if(!started){
 
@@ -3901,13 +4222,10 @@ c.addEventListener(
                         continue;
                     }
 
-                    const auto=
-                        getAutoShootRect();
-
                     if(
                         pointInRect(
                             x,y,
-                            auto
+                            getAutoShootRect()
                         )
                     ){
 
@@ -3916,13 +4234,22 @@ c.addEventListener(
                         continue;
                     }
 
-                    const back=
-                        getBackRect();
+                    if(
+                        pointInRect(
+                            x,y,
+                            getExtraInfoRect()
+                        )
+                    ){
+
+                        extraInfo=!extraInfo;
+
+                        continue;
+                    }
 
                     if(
                         pointInRect(
                             x,y,
-                            back
+                            getBackRect()
                         )
                     ){
 
@@ -3981,19 +4308,10 @@ c.addEventListener(
                 }
 
 
-                const play=
-                    getMenuButtonRect(0);
-
-                const weapons=
-                    getMenuButtonRect(1);
-
-                const settings=
-                    getMenuButtonRect(2);
-
-
                 if(
                     pointInRect(
-                        x,y,play
+                        x,y,
+                        getMenuButtonRect(0)
                     )
                 ){
 
@@ -4004,7 +4322,8 @@ c.addEventListener(
 
                 if(
                     pointInRect(
-                        x,y,weapons
+                        x,y,
+                        getMenuButtonRect(1)
                     )
                 ){
 
@@ -4015,7 +4334,8 @@ c.addEventListener(
 
                 if(
                     pointInRect(
-                        x,y,settings
+                        x,y,
+                        getMenuButtonRect(2)
                     )
                 ){
 
@@ -4028,9 +4348,7 @@ c.addEventListener(
             }
 
 
-            /* -----------------------------------------
-               GAME OVER
-            ----------------------------------------- */
+            /* GAME OVER */
 
             if(gameOver){
 
@@ -4054,9 +4372,7 @@ c.addEventListener(
             }
 
 
-            /* -----------------------------------------
-               WEAPON CHOICE
-            ----------------------------------------- */
+            /* WEAPON CHOICE */
 
             if(weaponChoiceOpen){
 
@@ -4076,6 +4392,7 @@ c.addEventListener(
                     ){
 
                         chooseWeapon(i);
+
                         break;
                     }
                 }
@@ -4084,9 +4401,7 @@ c.addEventListener(
             }
 
 
-            /* -----------------------------------------
-               UPGRADE
-            ----------------------------------------- */
+            /* UPGRADE */
 
             if(upgradeOpen){
 
@@ -4117,16 +4432,12 @@ c.addEventListener(
             }
 
 
-            /* -----------------------------------------
-               PAUSE
-            ----------------------------------------- */
-
-            const pause=
-                getPauseRect();
+            /* PAUSE */
 
             if(
                 pointInRect(
-                    x,y,pause
+                    x,y,
+                    getPauseRect()
                 )
             ){
 
@@ -4135,15 +4446,12 @@ c.addEventListener(
                 continue;
             }
 
-
             if(paused){
                 continue;
             }
 
 
-            /* -----------------------------------------
-               TWO-FINGER CONTROLS
-            ----------------------------------------- */
+            /* TWO-FINGER */
 
             if(
                 aimTouchId===null &&
@@ -4275,7 +4583,7 @@ c.addEventListener(
 
 
 /* =========================================================
-   POINTER CONTROLS
+   POINTER
 ========================================================= */
 
 let pointerAim=false;
@@ -4318,6 +4626,7 @@ c.addEventListener(
                         devices.computer
                     )
                 ){
+
                     return;
                 }
 
@@ -4329,6 +4638,17 @@ c.addEventListener(
                 ){
 
                     autoShoot=!autoShoot;
+                    return;
+                }
+
+                if(
+                    pointInRect(
+                        x,y,
+                        getExtraInfoRect()
+                    )
+                ){
+
+                    extraInfo=!extraInfo;
                     return;
                 }
 
@@ -4468,6 +4788,7 @@ c.addEventListener(
                 ){
 
                     chooseWeapon(i);
+
                     return;
                 }
             }
@@ -4489,11 +4810,14 @@ c.addEventListener(
 
                 if(
                     pointInUpgradeCard(
-                        x,y,cards[i]
+                        x,
+                        y,
+                        cards[i]
                     )
                 ){
 
                     chooseUpgrade(i);
+
                     return;
                 }
             }
@@ -4517,8 +4841,6 @@ c.addEventListener(
             return;
         }
 
-
-        /* Aim first */
 
         const adx=x-aimJoy.x;
         const ady=y-aimJoy.y;
@@ -4549,8 +4871,6 @@ c.addEventListener(
             return;
         }
 
-
-        /* Movement */
 
         const mdx=x-joy.x;
         const mdy=y-joy.y;
