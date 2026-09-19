@@ -50,13 +50,9 @@ c.height=H*dpr;
 ctx.setTransform(dpr,0,0,dpr,0,0);
 
 updateArena();
-joystickPos();
-aimJoystickPos();
 
 }
 
-addEventListener("resize",resize);
-resize();
 
 
 // =========================
@@ -115,9 +111,6 @@ ctx.font="10px system-ui";
 ctx.fillText(label,j.x,j.y+j.r+18);
 
 }
-
-drawJoystick(joy,"MOVE");
-drawJoystick(aimJoy,"AIM");
 
 ctx.textAlign="left";
 
@@ -264,6 +257,11 @@ knobR:24
 
 let moveTouchId=null;
 let aimTouchId=null;
+
+addEventListener("resize",resize);
+resize();
+joystickPos();
+aimJoystickPos();
 
 
 // =========================
