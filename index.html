@@ -138,17 +138,14 @@ const player={
     scatterTier:1,
     scatterPierce:false,
     scatterDamage:20,
-    scatterFireRate:1.5,
+    scatterFireRate:3,
 
     /* Fast */
-    fastDamageUpgrades:0,
-    fastAttackSpeedUpgrades:0,
-    fastVelocityUpgrades:0,
-    ammoCapacityUpgrades:0,
-    reloadTimeUpgrades:0,
+    fastTier:1,
+    fireMode:"auto",   /* "auto" = default speed, "semi" = half speed */
 
-    maxAmmo:8,
-    ammo:8,
+    maxAmmo:5,
+    ammo:5,
     reloadTime:2,
     reloadTimer:0,
     reloading:false,
@@ -161,6 +158,15 @@ const player={
     ringRadius:50,
     ringAngle:0,
     ringBalls:[],
+
+    /* Lightning */
+    lightTier:0,
+    lightMode:"enemy",     /* "enemy" or "bullet" */
+    lightDamage:0,
+    lightCooldown:5,
+    lightCd:0,
+    lightStun:0,
+    lightBolts:1,
 
     /* Walk speed / dash */
     walkTier:0,
@@ -225,8 +231,8 @@ let selectedDevice="mobile";
    JOYSTICKS
 ========================================================= */
 
-const joy={on:false,x:0,y:0,tx:0,ty:0,dx:0,dy:0,r:58,knobR:24};
-const aimJoy={on:false,x:0,y:0,tx:0,ty:0,dx:1,dy:0,r:58,knobR:24};
+const joy={on:false,x:0,y:0,tx:0,ty:0,dx:0,dy:0,r:29,knobR:12};
+const aimJoy={on:false,x:0,y:0,tx:0,ty:0,dx:1,dy:0,r:29,knobR:12};
 
 let moveTouchId=null;
 let aimTouchId=null;
@@ -234,7 +240,7 @@ let aimTouchId=null;
 function joystickPos(){
     const controlHeight=H-controlTop;
     const controlY=controlTop+controlHeight/2;
-    const side=Math.max(68,Math.min(78,W*.19));
+    const side=joy.r+10;
     joy.x=side;
     joy.y=controlY;
 }
@@ -242,7 +248,7 @@ function joystickPos(){
 function aimJoystickPos(){
     const controlHeight=H-controlTop;
     const controlY=controlTop+controlHeight/2;
-    const side=Math.max(68,Math.min(78,W*.19));
+    const side=aimJoy.r+10;
     aimJoy.x=W-side;
     aimJoy.y=controlY;
 }
@@ -272,20 +278,32 @@ function equipScatterBlaster(){
     player.scatterTier=1;
     player.scatterPierce=false;
     player.scatterDamage=20;
-    player.scatterFireRate=1.5;
-    player.fireRate=1.5;
+    player.scatterFireRate=3;
+    player.fireRate=3;
     player.bulletSpeed=480;
     shoot=0;
 }
 
+/* FAST PEW PEW
+   Auto = default cooldown, Semi = half speed (double cooldown). */
+
+const FAST_BASE_COOLDOWN=.40;
+
+function fastCooldown(){
+    /* Tier 6 doubles attack speed (halves cooldown) in both modes */
+    const tierMult=player.fastTier>=6?.5:1;
+    return FAST_BASE_COOLDOWN*(player.fireMode==="semi"?2:1)*tierMult;
+}
+
 function equipFastPewPew(){
     player.weapon="fast";
+    player.fastTier=1;
     player.shots=1;
     player.damage=10;
-    player.fireRate=.14;
+    player.fireRate=fastCooldown();
     player.bulletSpeed=480;
-    player.maxAmmo=8;
-    player.ammo=8;
+    player.maxAmmo=5;
+    player.ammo=5;
     player.reloadTime=2;
     player.reloadTimer=0;
     player.reloading=false;
@@ -351,14 +369,14 @@ const scatterTierUpgrades=[
 {
     tier:6,
     name:"Scatter Blaster Tier 6",
-    desc:"Fire cooldown decreases from 1.5 seconds to 1 second.",
+    desc:"Shots doubled from 5 to 10. Fire cooldown decreases from 3 seconds to 2 seconds.",
     apply:()=>{
         player.scatterTier=6;
-        player.shots=5;
+        player.shots=10;
         player.damage=50;
         player.scatterDamage=50;
-        player.scatterFireRate=1;
-        player.fireRate=1;
+        player.scatterFireRate=2;
+        player.fireRate=2;
         player.scatterPierce=true;
     }
 }
@@ -366,50 +384,67 @@ const scatterTierUpgrades=[
 
 
 /* =========================================================
-   FAST PEW PEW UPGRADES
+   FAST PEW PEW TIER UPGRADES
+   Branching: Tier N is only offered once you own Tier N-1.
+   (Tier 1 is the base weapon when equipped.)
 ========================================================= */
 
-const fastPewPewUpgrades=[
+function fastAmmoRefill(){
+    if(!player.reloading) player.ammo=player.maxAmmo;
+}
+
+const fastTierUpgrades=[
 {
-    name:"Pew Pew Power",
-    desc:"Increase damage by 50%",
+    tier:2,
+    name:"Fast Pew Pew Tier 2",
+    desc:"Ammo size increases by 3. Reload time decreases by 0.2 seconds.",
     apply:()=>{
-        player.damage*=1.5;
-        player.fastDamageUpgrades++;
+        player.fastTier=2;
+        player.maxAmmo=8;
+        player.reloadTime=1.8;
+        fastAmmoRefill();
     }
 },
 {
-    name:"Rapid Fire",
-    desc:"Increase attack speed by 25%",
+    tier:3,
+    name:"Fast Pew Pew Tier 3",
+    desc:"Ammo size increases to 10. Reload time decreases by 0.5 seconds.",
     apply:()=>{
-        player.fireRate/=1.25;
-        player.fastAttackSpeedUpgrades++;
+        player.fastTier=3;
+        player.maxAmmo=10;
+        player.reloadTime=1.3;
+        fastAmmoRefill();
     }
 },
 {
-    name:"Velocity Boost",
-    desc:"Increase projectile velocity by 50%",
+    tier:4,
+    name:"Fast Pew Pew Tier 4",
+    desc:"Damage increases from 10 to 20.",
     apply:()=>{
-        player.bulletSpeed*=1.5;
-        player.fastVelocityUpgrades++;
+        player.fastTier=4;
+        player.damage=20;
     }
 },
 {
-    name:"Ammo Capacity",
-    desc:"Increase maximum ammo by 2",
+    tier:5,
+    name:"Fast Pew Pew Tier 5",
+    desc:"Bullet speed is doubled. Damage increases from 20 to 25.",
     apply:()=>{
-        player.maxAmmo+=2;
-        player.ammo+=2;
-        player.ammo=Math.min(player.ammo,player.maxAmmo);
-        player.ammoCapacityUpgrades++;
+        player.fastTier=5;
+        player.bulletSpeed=960;
+        player.damage=25;
     }
 },
 {
-    name:"Quick Reload",
-    desc:"Decrease reload time by 0.2 seconds",
+    tier:6,
+    name:"Fast Pew Pew Tier 6",
+    desc:"Ammo size increases to 20. Reload time decreases to 1 second. Attack speed is doubled in both Auto and Semi.",
     apply:()=>{
-        player.reloadTime=Math.max(.2,player.reloadTime-.2);
-        player.reloadTimeUpgrades++;
+        player.fastTier=6;
+        player.maxAmmo=20;
+        player.reloadTime=1;
+        player.fireRate=fastCooldown();
+        fastAmmoRefill();
     }
 }
 ];
@@ -495,15 +530,385 @@ function tryDash(){
 }
 
 /* Dash button sits just left of the aim stick */
+/* Button layout: compact buttons packed tightly beside each stick.
+   Right side, moving away from the aim stick: LIGHTNING, then DASH.
+   Left side: FIRE MODE. Slots are fixed so buttons never shift. */
+const BTN_R=30;
+const BTN_GAP=8;
+const BTN_SLOP=4;
+
+function getLightningButton(){
+    return{x:aimJoy.x-aimJoy.r-BTN_GAP-BTN_R,y:aimJoy.y,r:BTN_R};
+}
+
 function getDashButton(){
-    const r=34;
-    return{x:aimJoy.x-aimJoy.r-r-8,y:aimJoy.y,r:r};
+    return{x:aimJoy.x-aimJoy.r-BTN_GAP-BTN_R-(BTN_R*2+BTN_GAP),y:aimJoy.y,r:BTN_R};
 }
 
 function hitDashButton(x,y){
     if(player.walkTier<6) return false;
     const b=getDashButton();
-    return Math.hypot(x-b.x,y-b.y)<=b.r+14;
+    return Math.hypot(x-b.x,y-b.y)<=b.r+BTN_SLOP;
+}
+
+function hitLightningButton(x,y){
+    if(!started||player.lightTier<=0) return false;
+    const b=getLightningButton();
+    return Math.hypot(x-b.x,y-b.y)<=b.r+BTN_SLOP;
+}
+
+function toggleLightningMode(){
+    if(!started||player.lightTier<=0) return false;
+    player.lightMode=player.lightMode==="enemy"?"bullet":"enemy";
+    return true;
+}
+
+
+/* =========================================================
+   FIRE MODE BUTTON (Fast Pew Pew only)
+   Sits just right of the movement stick.
+========================================================= */
+
+function toggleFireMode(){
+    if(player.weapon!=="fast") return false;
+    player.fireMode=player.fireMode==="auto"?"semi":"auto";
+    player.fireRate=fastCooldown();
+    return true;
+}
+
+function getFireModeButton(){
+    return{x:joy.x+joy.r+BTN_GAP+BTN_R,y:joy.y,r:BTN_R};
+}
+
+function hitFireModeButton(x,y){
+    if(!started||player.weapon!=="fast") return false;
+    const b=getFireModeButton();
+    return Math.hypot(x-b.x,y-b.y)<=b.r+BTN_SLOP;
+}
+
+
+/* =========================================================
+   LIGHTNING
+   Instant line-flash "bolts". Two modes (toggle button):
+   ENEMY  - damages + stuns the nearest enemy, then chains to every
+            enemy touching it (no chain limit, never the same enemy
+            twice per bolt).
+   BULLET - destroys the nearest enemy bullet, then chains to bullets
+            that are very close. No damage / no stun.
+========================================================= */
+
+/* Fixed at 2x the Spike Ring's STARTING orbit distance (50).
+   Intentionally NOT tied to player.ringRadius, so ring upgrades never
+   change lightning range. */
+const LIGHTNING_RANGE=100;
+
+const LIGHTNING_TOUCH_PAD=3;         /* slack (px) for "touching" */
+const LIGHTNING_BULLET_CHAIN=20;     /* bullets this close chain */
+const LIGHTNING_STUN_LOCK=2;         /* seconds after a stun ends before re-stun */
+const LIGHTNING_FLASH=.22;           /* how long a bolt stays on screen */
+
+let lightningBolts=[];
+
+function newBolt(bullet){
+    return{lines:[],life:LIGHTNING_FLASH,maxLife:LIGHTNING_FLASH,bullet:bullet};
+}
+
+function addBoltLine(bolt,x1,y1,x2,y2){
+
+    const pts=[{x:x1,y:y1}];
+
+    const dx=x2-x1;
+    const dy=y2-y1;
+    const len=Math.hypot(dx,dy)||1;
+    const segs=Math.max(2,Math.round(len/14));
+    const nx=-dy/len;
+    const ny=dx/len;
+
+    for(let i=1;i<segs;i++){
+        const t=i/segs;
+        const off=(Math.random()-.5)*12;
+        pts.push({x:x1+dx*t+nx*off,y:y1+dy*t+ny*off});
+    }
+
+    pts.push({x:x2,y:y2});
+
+    bolt.lines.push(pts);
+}
+
+function lightningHitEnemy(e){
+
+    if(e.hp<=0) return;
+
+    e.hp-=player.lightDamage;
+
+    /* Stun: can't be re-stunned until 2s after the previous stun ends */
+    if(player.lightStun>0 && !(e.stunLock>0)){
+        e.stun=player.lightStun;
+        e.stunLock=player.lightStun+LIGHTNING_STUN_LOCK;
+    }
+
+    if(e.hp<=0){
+
+        score+=e.isBoss?100:10;
+
+        orbs.push({x:e.x,y:e.y,r:6,value:20});
+
+        if(e.isBoss){
+            for(let i=0;i<4;i++){
+                orbs.push({
+                    x:e.x+(Math.random()-.5)*50,
+                    y:e.y+(Math.random()-.5)*50,
+                    r:6,
+                    value:20
+                });
+            }
+        }
+    }
+}
+
+/* Returns how many bolts were fired */
+function lightningStrikeEnemies(){
+
+    let fired=0;
+
+    for(let b=0;b<player.lightBolts;b++){
+
+        /* Closest living enemy in range. Damage is instant, so an enemy
+           an earlier bolt killed is already dead and the next bolt
+           picks a different target instead of wasting damage. Bolts
+           can still stack on one enemy while it survives. */
+
+        let best=null;
+        let bestD=Infinity;
+
+        for(const e of enemies){
+
+            if(e.hp<=0) continue;
+
+            const d=Math.hypot(e.x-player.x,e.y-player.y);
+
+            if(d-e.r>LIGHTNING_RANGE) continue;
+
+            if(d<bestD){
+                bestD=d;
+                best=e;
+            }
+        }
+
+        if(!best) break;
+
+        fired++;
+
+        const bolt=newBolt(false);
+
+        addBoltLine(bolt,player.x,player.y,best.x,best.y);
+        lightningHitEnemy(best);
+
+        const visited=new Set([best]);
+        const queue=[best];
+
+        while(queue.length){
+
+            const cur=queue.shift();
+
+            for(const o of enemies){
+
+                if(visited.has(o) || o.hp<=0) continue;
+
+                const d=Math.hypot(o.x-cur.x,o.y-cur.y);
+
+                if(d<cur.r+o.r+LIGHTNING_TOUCH_PAD){
+
+                    visited.add(o);
+
+                    addBoltLine(bolt,cur.x,cur.y,o.x,o.y);
+                    lightningHitEnemy(o);
+
+                    queue.push(o);
+                }
+            }
+        }
+
+        lightningBolts.push(bolt);
+    }
+
+    return fired;
+}
+
+function lightningStrikeBullets(){
+
+    let fired=0;
+
+    /* Large boss bullets are never destroyed by lightning. Instead they
+       act as relays: when a bolt reaches one, it fires its own chain
+       lightning from its position, exactly like the player's (same
+       range, same bolt count, same chaining). Each ball relays once per
+       volley so relays can't loop forever. */
+
+    const relayed=new Set();
+    const relayQueue=[];
+
+    function touchBullet(sh){
+
+        if(sh.bigBossShot){
+            if(!relayed.has(sh)){
+                relayed.add(sh);
+                relayQueue.push(sh);
+            }
+        }
+        else{
+            sh.life=0;
+        }
+    }
+
+    function nearestBullet(ox,oy,self){
+
+        let best=null;
+        let bestD=Infinity;
+
+        for(const sh of enemyShots){
+
+            if(sh.life<=0 || sh===self) continue;
+
+            /* a ball that already relayed is spent for this volley */
+            if(sh.bigBossShot && relayed.has(sh)) continue;
+
+            const d=Math.hypot(sh.x-ox,sh.y-oy);
+
+            if(d>LIGHTNING_RANGE) continue;
+
+            if(d<bestD){
+                bestD=d;
+                best=sh;
+            }
+        }
+
+        return best;
+    }
+
+    function zapChain(bolt,first,fromX,fromY){
+
+        addBoltLine(bolt,fromX,fromY,first.x,first.y);
+        touchBullet(first);
+
+        const visited=new Set([first]);
+        const queue=[first];
+
+        while(queue.length){
+
+            const cur=queue.shift();
+
+            for(const o of enemyShots){
+
+                if(visited.has(o) || o.life<=0) continue;
+
+                const d=Math.hypot(o.x-cur.x,o.y-cur.y);
+
+                if(d<=LIGHTNING_BULLET_CHAIN){
+
+                    visited.add(o);
+
+                    addBoltLine(bolt,cur.x,cur.y,o.x,o.y);
+                    touchBullet(o);
+
+                    queue.push(o);
+                }
+            }
+        }
+    }
+
+    /* The player's own bolts */
+
+    for(let b=0;b<player.lightBolts;b++){
+
+        const best=nearestBullet(player.x,player.y,null);
+
+        if(!best) break;
+
+        fired++;
+
+        const bolt=newBolt(true);
+
+        zapChain(bolt,best,player.x,player.y);
+
+        lightningBolts.push(bolt);
+    }
+
+    /* Relays from large boss bullets */
+
+    while(relayQueue.length){
+
+        const ball=relayQueue.shift();
+
+        for(let b=0;b<player.lightBolts;b++){
+
+            const target=nearestBullet(ball.x,ball.y,ball);
+
+            if(!target) break;
+
+            const bolt=newBolt(true);
+
+            zapChain(bolt,target,ball.x,ball.y);
+
+            lightningBolts.push(bolt);
+        }
+    }
+
+    /* Destroyed bullets go away immediately */
+    enemyShots=enemyShots.filter(sh=>sh.life>0);
+
+    return fired;
+}
+
+function updateLightning(dt){
+
+    for(const b of lightningBolts) b.life-=dt;
+    lightningBolts=lightningBolts.filter(b=>b.life>0);
+
+    if(player.lightTier<=0) return;
+
+    if(player.lightCd>0) player.lightCd-=dt;
+    if(player.lightCd>0) return;
+
+    player.lightCd=0;
+
+    const fired=player.lightMode==="bullet"
+        ? lightningStrikeBullets()
+        : lightningStrikeEnemies();
+
+    /* Only spend the cooldown if something was actually zapped */
+    if(fired>0) player.lightCd=player.lightCooldown;
+}
+
+/* Lightning is its own upgrade track. Tier 1 unlocks it. */
+
+function makeLightningTier(t,name,desc,dmg,cd,stun,bolts){
+    return{
+        tier:t,
+        name:name,
+        desc:desc,
+        apply:()=>{
+            player.lightTier=t;
+            player.lightDamage=dmg;
+            player.lightCooldown=cd;
+            player.lightStun=stun;
+            player.lightBolts=bolts;
+            player.lightCd=Math.min(player.lightCd,cd);
+        }
+    };
+}
+
+const lightningTierUpgrades=[
+    makeLightningTier(1,"Lightning","Unlocks Lightning: zaps the nearest enemy every 5s, chaining to touching enemies. 10 damage.",10,5,0,1),
+    makeLightningTier(2,"Lightning Tier 2","Damage increases from 10 to 15. Cooldown decreases from 5 to 4 seconds.",15,4,0,1),
+    makeLightningTier(3,"Lightning Tier 3","Damage increases to 20. Bolts now stun enemies for 0.1 seconds.",20,4,.1,1),
+    makeLightningTier(4,"Lightning Tier 4","Damage increases to 25. Fires 2 bolts at once that stack or split to avoid overkill.",25,4,.1,2),
+    makeLightningTier(5,"Lightning Tier 5","Stun duration increases from 0.1 to 0.2 seconds.",25,4,.2,2),
+    makeLightningTier(6,"Lightning Tier 6","Fires 3 bolts at once. Cooldown decreases to 3 seconds. Stun increases to 0.3 seconds.",25,3,.3,3)
+];
+
+function nextLightningUpgrade(){
+    return lightningTierUpgrades[player.lightTier]||null;
 }
 
 
@@ -590,16 +995,12 @@ function reset(){
     player.scatterTier=1;
     player.scatterPierce=false;
     player.scatterDamage=20;
-    player.scatterFireRate=1.5;
+    player.scatterFireRate=3;
 
-    player.fastDamageUpgrades=0;
-    player.fastAttackSpeedUpgrades=0;
-    player.fastVelocityUpgrades=0;
-    player.ammoCapacityUpgrades=0;
-    player.reloadTimeUpgrades=0;
+    player.fastTier=1;
 
-    player.maxAmmo=8;
-    player.ammo=8;
+    player.maxAmmo=5;
+    player.ammo=5;
     player.reloadTime=2;
     player.reloadTimer=0;
     player.reloading=false;
@@ -611,6 +1012,15 @@ function reset(){
     player.ringRadius=50;
     player.ringAngle=0;
     player.ringBalls=[];
+
+    player.lightTier=0;
+    player.lightMode="enemy";
+    player.lightDamage=0;
+    player.lightCooldown=5;
+    player.lightCd=0;
+    player.lightStun=0;
+    player.lightBolts=1;
+    lightningBolts=[];
 
     enemies=[];
     shots=[];
@@ -772,8 +1182,17 @@ function enemyFireAtPlayer(enemy){
    BOSS AI
 ========================================================= */
 
+/* Phase 3 large bullets: homing + magnetic */
+const BOSS_HOMING_TURN=1.1;      /* rad/sec - limited so it can be dodged */
+const BOSS_HOMING_LIFE=6;        /* seconds (also destroyed at the arena edge) */
+const BOSS_HOMING_SPREAD=.35;    /* radians between the 3 balls */
+const BOSS_MAGNET_RANGE=120;     /* how far a magnetic ball pulls small bullets */
+const BOSS_MAGNET_ACCEL=260;
+const BOSS_MAGNET_MAXSPEED=180;
+
 function bossBullet(e,a,speed,r,dmg,big){
-    enemyShots.push({
+
+    const b={
         x:e.x,
         y:e.y,
         vx:Math.cos(a)*speed,
@@ -783,7 +1202,11 @@ function bossBullet(e,a,speed,r,dmg,big){
         damage:dmg,
         bossShot:!big,
         bigBossShot:!!big
-    });
+    };
+
+    enemyShots.push(b);
+
+    return b;
 }
 
 /* Ring with a gap the player has to find */
@@ -872,11 +1295,28 @@ function bossUpdate(e,dt){
         e.ringTimer=4.5/rate;
     }
 
-    /* Big slow shot (50 dmg) */
+    /* Big slow shot (50 dmg).
+       Phase 2+: fires twice as fast.
+       Phase 3: fires 3 at a time; they home in on the player (turn rate
+       is limited) and are magnetic. They only die at the arena edge or
+       when their life runs out. */
     e.bigTimer-=dt;
     if(e.bigTimer<=0){
-        bossBullet(e,toPlayer,90,7,50,true);
-        e.bigTimer=3/rate;
+
+        if(phase===3){
+
+            for(let i=-1;i<=1;i++){
+                const b=bossBullet(e,toPlayer+i*BOSS_HOMING_SPREAD,90,7,50,true);
+                b.homing=true;
+                b.magnet=true;
+                b.life=BOSS_HOMING_LIFE;
+            }
+        }
+        else{
+            bossBullet(e,toPlayer,90,7,50,true);
+        }
+
+        e.bigTimer=(phase>=2?1.5:3)/rate;
     }
 
     /* Phase 2+: spiral bursts (2.5s on, 3.5s off) */
@@ -984,6 +1424,7 @@ function fireFast(){
 
     if(player.weapon!=="fast") return;
     if(player.reloading) return;
+    if(shoot>0) return;
 
     if(player.ammo<=0){
         startFastReload();
@@ -1016,7 +1457,7 @@ function fireFast(){
 
     player.ammo--;
 
-    shoot=player.fireRate;
+    shoot=fastCooldown();
 
     if(player.ammo<=0){
         startFastReload();
@@ -1277,7 +1718,7 @@ function getUpgradeCardRects(){
         const gap=12;
         const available=Math.max(280,H-140);
         let h=(available-gap*(n-1))/n;
-        h=Math.max(130,Math.min(190,h));
+        h=Math.max(n>=4?120:130,Math.min(190,h));
         const total=h*n+gap*(n-1);
         const startY=Math.max(96,(H-total)/2);
 
@@ -1354,8 +1795,8 @@ function openUpgrades(){
 
     weaponChoiceOpen=false;
 
-    /* Three independent upgrade tracks: your weapon, walk speed,
-       and the Spike Ring. One offer from each track shows up per
+    /* Four independent upgrade tracks: your weapon, walk speed,
+       the Spike Ring, and Lightning. One offer from each track shows up per
        level (skipped if that track is maxed out or unavailable). */
 
     if(player.weapon==="scatter"){
@@ -1368,11 +1809,12 @@ function openUpgrades(){
     }
     else if(player.weapon==="fast"){
 
-        const pick=fastPewPewUpgrades[
-            Math.floor(Math.random()*fastPewPewUpgrades.length)
-        ];
+        /* Branching: only the tier right after your current one */
+        const next=fastTierUpgrades.find(
+            u=>u.tier===player.fastTier+1
+        );
 
-        if(pick) upgradeChoices.push(pick);
+        if(next) upgradeChoices.push(next);
     }
 
     const walk=nextWalkUpgrade();
@@ -1380,6 +1822,9 @@ function openUpgrades(){
 
     const ring=nextRingUpgrade();
     if(ring) upgradeChoices.push(ring);
+
+    const lightning=nextLightningUpgrade();
+    if(lightning) upgradeChoices.push(lightning);
 
     if(upgradeChoices.length>0){
         upgradeOpen=true;
@@ -1416,6 +1861,48 @@ function togglePause(){
     if(weaponChoiceOpen) return;
 
     paused=!paused;
+}
+
+
+/* =========================================================
+   BOSS BALL MAGNETS
+   Magnetic large bullets pull nearby small enemy bullets toward them.
+========================================================= */
+
+function updateBossMagnets(dt){
+
+    for(const m of enemyShots){
+
+        if(!m.magnet || m.life<=0) continue;
+
+        for(const s of enemyShots){
+
+            if(s===m || s.bigBossShot || s.life<=0) continue;
+
+            const dx=m.x-s.x;
+            const dy=m.y-s.y;
+            const d=Math.hypot(dx,dy);
+
+            if(d>=BOSS_MAGNET_RANGE || d<1) continue;
+
+            s.vx+=dx/d*BOSS_MAGNET_ACCEL*dt;
+            s.vy+=dy/d*BOSS_MAGNET_ACCEL*dt;
+
+            const sp=Math.hypot(s.vx,s.vy);
+
+            if(sp>BOSS_MAGNET_MAXSPEED){
+                s.vx*=BOSS_MAGNET_MAXSPEED/sp;
+                s.vy*=BOSS_MAGNET_MAXSPEED/sp;
+            }
+
+            /* settle near the ball instead of orbiting forever */
+            if(d<30){
+                const k=Math.max(0,1-4*dt);
+                s.vx*=k;
+                s.vy*=k;
+            }
+        }
+    }
 }
 
 
@@ -1484,10 +1971,36 @@ function updateProjectiles(dt){
 
     for(const s of enemyShots){
 
+        /* Homing: keeps turning toward the player (even after passing
+           them) at a limited turn rate */
+        if(s.homing){
+
+            const sp=Math.hypot(s.vx,s.vy)||1;
+            const cur=Math.atan2(s.vy,s.vx);
+            const want=Math.atan2(player.y-s.y,player.x-s.x);
+
+            let dif=want-cur;
+
+            while(dif>Math.PI) dif-=Math.PI*2;
+            while(dif<-Math.PI) dif+=Math.PI*2;
+
+            const maxTurn=BOSS_HOMING_TURN*dt;
+
+            const na=cur+Math.max(-maxTurn,Math.min(maxTurn,dif));
+
+            s.vx=Math.cos(na)*sp;
+            s.vy=Math.sin(na)*sp;
+        }
+
         s.x+=s.vx*dt;
         s.y+=s.vy*dt;
 
         s.life-=dt;
+
+        /* Homing balls are destroyed when they hit the arena barrier */
+        if(s.homing && (s.x<arena.left || s.x>arena.right || s.y<arena.top || s.y>gameBottom)){
+            s.life=0;
+        }
 
         const dx=player.x-s.x;
         const dy=player.y-s.y;
@@ -1856,12 +2369,17 @@ function update(dt){
 
             const d=Math.hypot(dx,dy);
 
+            if(e.stun>0) e.stun-=dt;
+            if(e.stunLock>0) e.stunLock-=dt;
+
+            const frozen=e.stun>0;
+
             if(e.isBoss){
 
-                bossUpdate(e,dt);
+                if(!frozen) bossUpdate(e,dt);
 
             }
-            else{
+            else if(!frozen){
 
                 if(d>0){
                     e.x+=dx/d*e.speed*dt;
@@ -1898,8 +2416,14 @@ function update(dt){
     }
 
 
+    /* ---------- LIGHTNING ---------- */
+
+    updateLightning(dt);
+
+
     /* ---------- PROJECTILES (always runs) ---------- */
 
+    updateBossMagnets(dt);
     updateProjectiles(dt);
 
 
@@ -2337,15 +2861,15 @@ function drawWeaponCard(r,index){
 
     if(weapon==="scatter"){
         text("20 DAMAGE",r.x+18,r.y+66,12,"#ffcf79");
-        text("1.5s COOLDOWN",r.x+18,r.y+90,11,"#8799a5");
+        text("3s COOLDOWN",r.x+18,r.y+90,11,"#8799a5");
         text("No ammo or reload",r.x+18,r.y+116,11,"#8799a5");
         text("Upgrades increase shots and damage",r.x+18,r.y+142,10,"#60737f");
     }
     else if(weapon==="fast"){
         text("10 DAMAGE",r.x+18,r.y+66,12,"#ffcf79");
-        text("8 AMMO",r.x+18,r.y+90,11,"#8799a5");
+        text("5 AMMO • 0.4s SHOTS",r.x+18,r.y+90,11,"#8799a5");
         text("2s RELOAD",r.x+18,r.y+114,11,"#8799a5");
-        text("Automatic rapid-fire weapon",r.x+18,r.y+140,10,"#60737f");
+        text("Auto / Semi fire mode toggle",r.x+18,r.y+140,10,"#60737f");
     }
 }
 
@@ -2495,6 +3019,16 @@ function drawHUD(){
     }
     else if(player.weapon==="fast"){
 
+        text(
+            "FAST T"+player.fastTier+" • "+player.fireMode.toUpperCase(),
+            W-18,
+            hudY,
+            10,
+            "#c4d4db",
+            "right"
+        );
+        hudY+=14;
+
         if(player.reloading){
 
             text("RELOADING",W-18,hudY,10,"#ffcb72","right");
@@ -2534,6 +3068,31 @@ function drawHUD(){
 
         text(
             player.ringCount+" BALLS • "+Math.round(player.ringDamage)+" DMG",
+            W-18,
+            hudY,
+            9,
+            "#708490",
+            "right"
+        );
+        hudY+=13;
+    }
+
+    if(player.lightTier>0){
+
+        const bl=player.lightMode==="bullet";
+
+        text(
+            "LIGHTNING T"+player.lightTier+" • "+(bl?"BULLET":"ENEMY"),
+            W-18,
+            hudY,
+            10,
+            bl?"#d28bff":"#7fe6ff",
+            "right"
+        );
+        hudY+=14;
+
+        text(
+            player.lightBolts+(player.lightBolts>1?" BOLTS":" BOLT")+" • "+(bl?"NO DMG":player.lightDamage+" DMG"),
             W-18,
             hudY,
             9,
@@ -2583,16 +3142,13 @@ function drawExtraInfo(){
     }
     else if(player.weapon==="fast"){
         lines.push({t:"FAST PEW PEW",size:9,color:"#e0edf1",gap:3});
+        lines.push({t:"TIER "+player.fastTier+"   MODE "+player.fireMode.toUpperCase(),size:8,color:"#8298a4"});
         lines.push({t:"DAMAGE "+Math.round(player.damage),size:8,color:"#8298a4"});
         lines.push({t:"SHOTS "+player.shots,size:8,color:"#8298a4"});
-        lines.push({t:"COOLDOWN "+player.fireRate.toFixed(3)+"s",size:8,color:"#8298a4"});
+        lines.push({t:"COOLDOWN "+player.fireRate.toFixed(2)+"s",size:8,color:"#8298a4"});
         lines.push({t:"BULLET SPEED "+Math.round(player.bulletSpeed),size:8,color:"#8298a4"});
         lines.push({t:"AMMO "+player.ammo+"/"+player.maxAmmo,size:8,color:"#8298a4"});
         lines.push({t:"RELOAD "+player.reloadTime.toFixed(1)+"s",size:8,color:"#8298a4"});
-        lines.push({
-            t:"DMG UP "+player.fastDamageUpgrades+"   SPEED UP "+player.fastAttackSpeedUpgrades,
-            size:7,color:"#60737f"
-        });
     }
     else{
         lines.push({t:"NO WEAPON",size:9,color:"#8298a4",gap:3});
@@ -2605,6 +3161,17 @@ function drawExtraInfo(){
         lines.push({t:"BALLS "+player.ringCount,size:8,color:"#8298a4"});
         lines.push({t:"SPIN SPEED "+player.ringSpinSpeed.toFixed(2)+" rad/s",size:8,color:"#8298a4"});
         lines.push({t:"HIT COOLDOWN "+RING_HIT_COOLDOWN.toFixed(1)+"s",size:8,color:"#8298a4"});
+    }
+
+    if(player.lightTier>0){
+        const bl=player.lightMode==="bullet";
+        lines.push({t:"LIGHTNING",size:9,color:"#7fe6ff",gap:8});
+        lines.push({t:"TIER "+player.lightTier+"   MODE "+(bl?"BULLET":"ENEMY"),size:8,color:"#8298a4"});
+        lines.push({t:"DAMAGE "+(bl?"NONE":player.lightDamage),size:8,color:"#8298a4"});
+        lines.push({t:"BOLTS "+player.lightBolts,size:8,color:"#8298a4"});
+        lines.push({t:"COOLDOWN "+player.lightCooldown+"s",size:8,color:"#8298a4"});
+        lines.push({t:"STUN "+(bl?"NONE":player.lightStun.toFixed(1)+"s"),size:8,color:"#8298a4"});
+        lines.push({t:"RANGE "+LIGHTNING_RANGE,size:8,color:"#8298a4"});
     }
 
     let contentH=0;
@@ -2767,6 +3334,21 @@ function drawShots(){
     }
 
     for(const s of enemyShots){
+
+        if(s.magnet){
+
+            ctx.save();
+
+            ctx.globalAlpha=.18;
+            ctx.strokeStyle="#ff6b9a";
+            ctx.lineWidth=1.5;
+
+            ctx.beginPath();
+            ctx.arc(s.x,s.y,BOSS_MAGNET_RANGE,0,Math.PI*2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
 
         ctx.fillStyle=s.bigBossShot?"#ff6b9a":"#ff9a4a";
 
@@ -2948,6 +3530,153 @@ function drawDashButton(){
 
 
 /* =========================================================
+   FIRE MODE BUTTON DRAW
+========================================================= */
+
+function drawFireModeButton(){
+
+    if(player.weapon!=="fast") return;
+
+    const b=getFireModeButton();
+    const semi=player.fireMode==="semi";
+
+    ctx.save();
+
+    ctx.globalAlpha=.6;
+
+    ctx.fillStyle=semi?"#4b3a1d":"#1d4b57";
+    ctx.strokeStyle=semi?"#ffcf79":"#57e9ff";
+    ctx.lineWidth=2;
+
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    text(semi?"SEMI":"AUTO",b.x,b.y-4,12,"#e7fbff","center");
+    text("FIRE MODE",b.x,b.y+12,7,"#8fa4b0","center");
+}
+
+
+/* =========================================================
+   LIGHTNING DRAW
+========================================================= */
+
+function drawLightning(){
+
+    for(const b of lightningBolts){
+
+        const a=Math.max(0,b.life/b.maxLife);
+
+        ctx.save();
+
+        ctx.globalAlpha=a;
+        ctx.lineJoin="round";
+        ctx.lineCap="round";
+
+        for(let pass=0;pass<2;pass++){
+
+            if(pass===0){
+                ctx.shadowColor=b.bullet?"#d28bff":"#57e9ff";
+                ctx.shadowBlur=16;
+                ctx.strokeStyle=b.bullet?"#b56cff":"#3fd6ff";
+                ctx.lineWidth=5;
+            }
+            else{
+                ctx.shadowBlur=0;
+                ctx.strokeStyle="#ffffff";
+                ctx.lineWidth=2;
+            }
+
+            for(const pts of b.lines){
+
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x,pts[0].y);
+
+                for(let i=1;i<pts.length;i++){
+                    ctx.lineTo(pts[i].x,pts[i].y);
+                }
+
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+/* Icy tint on stunned enemies */
+function drawStunOverlay(){
+
+    for(const e of enemies){
+
+        if(!(e.stun>0)) continue;
+
+        ctx.save();
+
+        ctx.globalAlpha=.55;
+        ctx.fillStyle="#9fe8ff";
+        ctx.fillRect(e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+
+        ctx.globalAlpha=1;
+        ctx.strokeStyle="#e6fbff";
+        ctx.lineWidth=2;
+        ctx.strokeRect(e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+
+        ctx.restore();
+    }
+}
+
+function drawLightningButton(){
+
+    if(player.lightTier<=0) return;
+
+    const b=getLightningButton();
+
+    const bullet=player.lightMode==="bullet";
+    const ready=player.lightCd<=0;
+
+    ctx.save();
+
+    ctx.globalAlpha=.6;
+
+    ctx.fillStyle=bullet?"#3f2a5c":"#1d4b57";
+    ctx.strokeStyle=bullet?"#d28bff":"#57e9ff";
+    ctx.lineWidth=2;
+
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+
+    /* cooldown ring fills back up */
+    if(!ready){
+
+        ctx.globalAlpha=.85;
+        ctx.strokeStyle=bullet?"#d28bff":"#57e9ff";
+        ctx.lineWidth=3;
+
+        ctx.beginPath();
+        ctx.arc(
+            b.x,
+            b.y,
+            b.r-4,
+            -Math.PI/2,
+            -Math.PI/2+Math.PI*2*(1-player.lightCd/player.lightCooldown)
+        );
+        ctx.stroke();
+    }
+
+    ctx.restore();
+
+    text("ZAP",b.x,b.y-4,12,"#e7fbff","center");
+    text(bullet?"BULLET":"ENEMY",b.x,b.y+11,8,"#a9bcc7","center");
+}
+
+
+/* =========================================================
    JOYSTICK DRAW
 ========================================================= */
 
@@ -3103,6 +3832,8 @@ function drawGame(){
     drawOrbs();
     drawEnemies();
     drawShots();
+    drawStunOverlay();
+    drawLightning();
     drawRing();
     drawPlayer();
 
@@ -3115,6 +3846,8 @@ function drawGame(){
     drawJoystick(joy);
     drawAimJoystick();
     drawDashButton();
+    drawFireModeButton();
+    drawLightningButton();
 
     if(paused) drawPaused();
     if(weaponChoiceOpen) drawWeaponChoice();
@@ -3316,6 +4049,16 @@ c.addEventListener(
                 continue;
             }
 
+            if(hitFireModeButton(x,y)){
+                toggleFireMode();
+                continue;
+            }
+
+            if(hitLightningButton(x,y)){
+                toggleLightningMode();
+                continue;
+            }
+
             if(aimTouchId===null && beginAimTouch(touch)){
                 continue;
             }
@@ -3412,6 +4155,16 @@ c.addEventListener(
             return;
         }
 
+        if(hitFireModeButton(x,y)){
+            toggleFireMode();
+            return;
+        }
+
+        if(hitLightningButton(x,y)){
+            toggleLightningMode();
+            return;
+        }
+
         const adx=x-aimJoy.x;
         const ady=y-aimJoy.y;
 
@@ -3494,6 +4247,10 @@ window.addEventListener(
     e=>{
         if(e.key==="p" || e.key==="P" || e.key==="Escape"){
             togglePause();
+        }
+
+        if(e.key==="l" || e.key==="L"){
+            toggleLightningMode();
         }
 
         if(e.key===" "){
